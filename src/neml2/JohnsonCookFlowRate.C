@@ -15,7 +15,6 @@
 #include "neml2/tensors/functions/pow.h"
 #include "neml2/tensors/functions/heaviside.h"
 #include "neml2/tensors/functions/macaulay.h"
-#include "neml2/tensors/functions/clamp.h"
 
 namespace neml2
 {
@@ -31,8 +30,6 @@ JohnsonCookFlowRate::expected_options()
       "\\f$ \\dot{\\varepsilon}_p = \\dot{\\varepsilon}_0 \\exp\\left(\\frac{\\sigma_{vm} / "
       "(\\sigma_y \\Theta) - 1}{C}\\right) \\f$ "
       "where \\f$ \\sigma_y = A + B \\varepsilon_p^n \\f$ and \\f$ \\Theta = 1 - T^{*m} \\f$.";
-
-  options.set<bool>("define_second_derivatives") = true;
 
   // Input variables
   options.set_input("vonmises_stress") = VariableName(STATE, "internal", "s");
@@ -98,7 +95,7 @@ JohnsonCookFlowRate::JohnsonCookFlowRate(const OptionSet & options)
 }
 
 void
-JohnsonCookFlowRate::set_value(bool out, bool dout_din, bool d2out_din2)
+JohnsonCookFlowRate::set_value(bool out, bool dout_din, bool /*d2out_din2*/)
 {
   // Small value to avoid numerical issues
   const auto eps_min = Scalar::full(1e-10, _s.options());
@@ -142,14 +139,14 @@ JohnsonCookFlowRate::set_value(bool out, bool dout_din, bool d2out_din2)
   const auto ratio = _s() / sigma_y_safe;
 
   // Exponential argument: (ratio - 1) / C
-  // Clamp to [-20, 20] for numerical stability
+  // Clamp to [-700, 700] only to prevent IEEE double overflow (exp(709) ~ DBL_MAX).
+  // The gradient is NOT zeroed at the clamp boundary — we use the straight-through
+  // estimator so Newton always sees the correct sensitivity direction.
   const auto exp_arg = (ratio - one) / _C;
-  const auto exp_arg_max = Scalar::full(20.0, _s.options());
-  const auto exp_arg_min = Scalar::full(-20.0, _s.options());
+  const auto exp_arg_max = Scalar::full(700.0, _s.options());
+  const auto exp_arg_min = Scalar::full(-700.0, _s.options());
   const auto exp_arg_clamped = exp_arg - macaulay(exp_arg - exp_arg_max) +
                                macaulay(exp_arg_min - exp_arg);
-  const auto exp_arg_active =
-      heaviside(exp_arg_max - exp_arg) * heaviside(exp_arg - exp_arg_min);
 
   // Flow rate: ep_dot = eps0 * exp(exp_arg) * H(ratio - 1)
   // Using Heaviside to ensure no plastic flow when below yield
@@ -168,7 +165,7 @@ JohnsonCookFlowRate::set_value(bool out, bool dout_din, bool d2out_din2)
     {
       // d(ep_dot)/d(s) = eps0 * exp(exp_arg) * H(ratio-1) * (1 / (C * sigma_y))
       // Note: We ignore the delta function from Heaviside derivative
-      const auto dep_dot_ds = ep_dot * exp_arg_active / (_C * sigma_y_safe);
+      const auto dep_dot_ds = ep_dot / (_C * sigma_y_safe);
       _ep_dot.d(_s) = dep_dot_ds;
     }
 
@@ -185,7 +182,7 @@ JohnsonCookFlowRate::set_value(bool out, bool dout_din, bool d2out_din2)
       // d(exp_arg)/d(ep) = dratio_dep / C
       const auto dexp_arg_dep = dratio_dep / _C;
       // d(ep_dot)/d(ep) = ep_dot * dexp_arg_dep (ignoring Heaviside derivative)
-      const auto dep_dot_dep = ep_dot * exp_arg_active * dexp_arg_dep;
+      const auto dep_dot_dep = ep_dot * dexp_arg_dep;
       _ep_dot.d(_ep) = dep_dot_dep;
     }
 
@@ -203,16 +200,9 @@ JohnsonCookFlowRate::set_value(bool out, bool dout_din, bool d2out_din2)
       // d(exp_arg)/d(T) = dratio_dT / C
       const auto dexp_arg_dT = dratio_dT / _C;
       // d(ep_dot)/d(T) = ep_dot * dexp_arg_dT
-      const auto dep_dot_dT = ep_dot * exp_arg_active * dexp_arg_dT;
+      const auto dep_dot_dT = ep_dot * dexp_arg_dT;
       _ep_dot.d(*_T) = dep_dot_dT;
     }
-  }
-
-  // Second derivatives (for consistent tangent if needed)
-  if (d2out_din2)
-  {
-    // Second derivatives can be implemented here if needed for higher-order convergence
-    // For now, we rely on first derivatives being sufficient for Newton convergence
   }
 }
 } // namespace neml2

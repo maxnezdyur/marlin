@@ -1,24 +1,32 @@
 # timestep in seconds
 dt = 1e-8
 
-# velocity in m/s
+# initial downward velocity in m/s
 v = 200
 
 [GlobalParams]
-  displacements = 'disp_x disp_y disp_z'
+  displacements = 'disp_x disp_y'
 []
 
 [Problem]
   extra_tag_matrices = 'mass'
 []
 
-# variables
+[Mesh]
+  type = GeneratedMesh
+  dim = 2
+  xmin = 0
+  xmax = '${units 0.25 in -> m}'
+  ymin = 0
+  ymax = '${units 3 in -> m}'
+  nx = 4
+  ny = 20
+[]
+
 [Variables]
   [disp_x]
   []
   [disp_y]
-  []
-  [disp_z]
   []
 []
 
@@ -26,8 +34,6 @@ v = 200
   [force_x]
   []
   [force_y]
-  []
-  [force_z]
   []
 []
 
@@ -44,63 +50,11 @@ v = 200
     variable = force_y
     vector_tag = NONTIME
   []
-  [force_z]
-    type = TagVectorAux
-    v = disp_z
-    variable = force_z
-    vector_tag = NONTIME
-  []
 []
 
-# cylindrical slug mesh
-[Mesh]
-  [disc]
-    type = ConcentricCircleMeshGenerator
-    num_sectors = 8 # adjust for mesh resolution
-    radii = '${units 0.25 in -> m}'
-    rings = 10 # adjust for mesh resolution
-    has_outer_square = false
-    preserve_volumes = true
-    smoothing_max_it = 3
-  []
-  [rotate_x_90]
-    type = TransformGenerator
-    input = disc
-    transform = ROTATE
-    vector_value = '0 90 0'
-  []
-  [extrude]
-    type = AdvancedExtruderGenerator
-    input = rotate_x_90
-    direction = '0 1 0'
-    heights = '${units 3 in -> m}'
-    num_layers = 50 # adjust for mesh resolution
-  []
-  [impact_face]
-    type = SideSetsAroundSubdomainGenerator
-    block = 1
-    input = extrude
-    new_boundary = impact_face
-    normal = '0 -1 0'
-  []
-  [back_face]
-    type = SideSetsAroundSubdomainGenerator
-    block = 1
-    input = impact_face
-    new_boundary = back_face
-    normal = '0 1 0'
-  []
-[]
-
-# set velocity in the -y direction
+# initial -y velocity via nonzero OLD state: v_y = (current - old) / dt = -v
 [ICs]
-  [current]
-    type = ConstantIC
-    variable = disp_y
-    value = 0
-    state = CURRENT
-  []
-  [old]
+  [old_y]
     type = ConstantIC
     variable = disp_y
     value = '${fparse v*dt}'
@@ -108,37 +62,31 @@ v = 200
   []
 []
 
-# simple penalty anvil BC
+# simple penalty anvil at y < 0
 [Functions]
   [anvil]
     type = ParsedFunction
     expression = 'if(y<0, -y*${units 20000 GPa -> Pa}, 0)'
   []
 []
+
 [BCs]
   [anvil]
     type = FunctionNeumannBC
     function = anvil
     variable = disp_y
-    boundary = impact_face
+    boundary = bottom
     use_displaced_mesh = true
   []
 []
 
-# material properties
 [Materials]
-  # [elasticity_slug]
-  #   type = ComputeIsotropicElasticityTensor
-  #   youngs_modulus = ${units 70 GPa -> Pa}
-  #   poissons_ratio = 0.28
-  # []
-  [slug_density]
+  [density]
     type = StrainAdjustedDensity
     strain_free_density = '${units 2700 kg/m^3}'
   []
 []
 
-# mechanics and mass matrix kernels
 [Kernels]
   [mass_x]
     type = MassMatrix
@@ -152,12 +100,6 @@ v = 200
     matrix_tags = 'mass'
     variable = disp_y
   []
-  [mass_z]
-    type = MassMatrix
-    density = density
-    matrix_tags = 'mass'
-    variable = disp_z
-  []
 []
 
 [NEML2]
@@ -165,7 +107,7 @@ v = 200
   [all]
     executor_name = 'neml2'
     model = 'model'
-    verbose = true
+    verbose = false
     keep_tensors_on_device = true
     moose_input_kernels = 'strain'
 
@@ -213,22 +155,25 @@ v = 200
 
 [Executioner]
   type = Transient
+
   [TimeIntegrator]
     type = NEML2CentralDifference
     mass_matrix_tag = 'mass'
     use_constant_mass = true
-    second_order_vars = 'disp_x disp_y disp_z'
+    second_order_vars = 'disp_x disp_y'
     assembly = 'assembly'
     fe = 'fe'
   []
 
   start_time = 0.0
-  num_steps = 1000
+  num_steps = 150
   dt = '${units ${dt} s}'
   dtmin = '${units ${dt} s}'
 []
 
 [Outputs]
-  time_step_interval = 50
+  execute_on = FINAL
+  file_base = slug_2d
+  show = 'disp_x disp_y force_x force_y'
   exodus = true
 []

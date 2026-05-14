@@ -1,0 +1,31 @@
+[Tests]
+  issues = '#160'
+  [slug_2d_moose_j2]
+    type = Exodiff
+    input = 2d_slug_mesh_moose_j2.i
+    exodiff = slug_2d.e
+    abs_zero = 1e-7
+    requirement = 'The system shall run a reduced 2D Johnson-Cook slug impact simulation using MOOSE radial-return plasticity.'
+    compute_devices = 'cpu'
+    capabilities = 'method=opt'
+    max_parallel = 1
+    max_threads = 1
+    recover = false
+    restep = false
+  []
+  [slug_2d_neml2]
+    type = Exodiff
+    input = 2d_slug_mesh_neml2.i
+    exodiff = slug_2d.e
+    abs_zero = 1e-7
+    custom_cmp = slug_2d_neml2.exodiff
+    prereq = slug_2d_moose_j2
+    requirement = 'The system shall run a reduced 2D Johnson-Cook slug impact simulation using NEML2 and match the MOOSE radial-return displacement response.'
+    compute_devices = 'cpu'
+    capabilities = 'method=opt & neml2'
+    max_parallel = 1
+    max_threads = 1
+    recover = false
+    restep = false
+  []
+[]

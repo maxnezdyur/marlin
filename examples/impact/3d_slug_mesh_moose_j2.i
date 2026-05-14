@@ -127,19 +127,88 @@ v = 200
 
 # material properties
 [Materials]
-  # [elasticity_slug]
-  #   type = ComputeIsotropicElasticityTensor
-  #   youngs_modulus = ${units 70 GPa -> Pa}
-  #   poissons_ratio = 0.28
-  # []
   [slug_density]
     type = StrainAdjustedDensity
     strain_free_density = '${units 2700 kg/m^3}'
+  []
+  [elasticity_tensor]
+    type = ComputeIsotropicElasticityTensor
+    youngs_modulus = '${units 70 GPa -> Pa}'
+    poissons_ratio = 0.28
+  []
+  [strain]
+    type = ComputeIncrementalStrain
+    implicit = false
+  []
+
+  [effective_plastic_strain_rate]
+    type = ParsedMaterial
+    property_name = ep_dot
+    expression = 'if(dt=0, 1, (ep-ep_old)/dt)'
+    material_property_names = 'ep:=effective_plastic_strain ep_old:=Old[effective_plastic_strain]'
+    extra_symbols = dt
+    outputs = exodus
+  []
+
+  [slug_flow_stress]
+    type = DerivativeParsedMaterial
+    property_name = flow_stress
+    # OFHC copper Johnson-Cook parameters matching johnson_cook_neml2.i
+    expression = 'A:=99.7e6; B:=262.8e6; C:=0.029; n:=0.23; ep_dot_0:=1.0; ep_min:=1e-10;
+                  ep_safe:=sqrt(ep*ep+ep_min*ep_min);
+                  ep_dot:=if(dt=0, 1, max(0,(ep-ep_old)/dt)); ep_dot_star:=max(1.0,ep_dot/ep_dot_0);
+                  (A+B*ep_safe^n)*(1+C*log(ep_dot_star))'
+    material_property_names = 'ep:=effective_plastic_strain ep_old:=Old[effective_plastic_strain]'
+    additional_derivative_symbols = 'ep'
+    extra_symbols = dt
+    derivative_order = 2
+    compute = false
+    epsilon = 0.0
+    evalerror_behavior = error
+    output_properties = flow_stress
+    outputs = exodus
+  []
+  [plasticity]
+    type = FlowStressMaterialPlasticityStressUpdate
+    flow_stress_material = slug_flow_stress
+    line_search = false
+    outputs = exodus
+    output_properties = effective_plastic_strain
+  []
+  [stress]
+    type = ComputeMultipleInelasticStress
+    inelastic_models = plasticity
+    perform_finite_strain_rotations = false
+    tangent_operator = elastic
   []
 []
 
 # mechanics and mass matrix kernels
 [Kernels]
+  [stress_x]
+    type = DynamicStressDivergenceTensors
+    alpha = 0
+    component = 0
+    implicit = false
+    use_displaced_mesh = false
+    variable = disp_x
+  []
+  [stress_y]
+    type = DynamicStressDivergenceTensors
+    alpha = 0
+    component = 1
+    implicit = false
+    use_displaced_mesh = false
+    variable = disp_y
+  []
+  [stress_z]
+    type = DynamicStressDivergenceTensors
+    alpha = 0
+    component = 2
+    implicit = false
+    use_displaced_mesh = false
+    variable = disp_z
+  []
   [mass_x]
     type = MassMatrix
     density = density
@@ -160,66 +229,21 @@ v = 200
   []
 []
 
-[NEML2]
-  input = 'johnson_cook_neml2.i'
-  [all]
-    executor_name = 'neml2'
-    model = 'model'
-    verbose = true
-    keep_tensors_on_device = true
-    moose_input_kernels = 'strain'
-
-    moose_input_types = 'POSTPROCESSOR POSTPROCESSOR POSTPROCESSOR'
-    moose_inputs = '     time          time          temperature'
-    neml2_inputs = '     forces/t      old_forces/t  forces/T'
-  []
-[]
-
 [Postprocessors]
-  [time]
-    type = TimePostprocessor
-    execute_on = 'INITIAL TIMESTEP_BEGIN'
-    outputs = 'none'
-  []
   [temperature]
     type = ConstantPostprocessor
     value = 300
   []
 []
 
-[UserObjects]
-  [assembly]
-    type = NEML2Assembly
-  []
-  [fe]
-    type = NEML2FEInterpolation
-    assembly = 'assembly'
-  []
-  [strain]
-    type = NEML2SmallStrain
-    assembly = 'assembly'
-    fe = 'fe'
-    to_neml2 = 'forces/E'
-  []
-  [residual]
-    type = NEML2StressDivergence
-    assembly = 'assembly'
-    fe = 'fe'
-    executor = 'neml2'
-    stress = 'state/S'
-    residual = 'NONTIME'
-  []
-[]
-
 [Executioner]
   type = Transient
+
   [TimeIntegrator]
-    type = NEML2CentralDifference
+    type = ExplicitMixedOrder
     mass_matrix_tag = 'mass'
     use_constant_mass = true
     second_order_vars = 'disp_x disp_y disp_z'
-    assembly = 'assembly'
-    fe = 'fe'
   []
 
   start_time = 0.0
