@@ -136,10 +136,8 @@ TEST_F(JohnsonCookFlowRateTest, RateSensitivity)
   auto out1 = _model->value(in1);
   auto out2 = _model->value(in2);
 
-  auto rate1 =
-      out1.at(neml2::VariableName(neml2::STATE, "internal", "gamma_rate")).item<double>();
-  auto rate2 =
-      out2.at(neml2::VariableName(neml2::STATE, "internal", "gamma_rate")).item<double>();
+  auto rate1 = out1.at(neml2::VariableName(neml2::STATE, "internal", "gamma_rate")).item<double>();
+  auto rate2 = out2.at(neml2::VariableName(neml2::STATE, "internal", "gamma_rate")).item<double>();
 
   // Higher stress should give higher flow rate
   EXPECT_GT(rate2, rate1);
@@ -163,10 +161,8 @@ TEST_F(JohnsonCookFlowRateTest, HardeningEffect)
   auto out1 = _model->value(in1);
   auto out2 = _model->value(in2);
 
-  auto rate1 =
-      out1.at(neml2::VariableName(neml2::STATE, "internal", "gamma_rate")).item<double>();
-  auto rate2 =
-      out2.at(neml2::VariableName(neml2::STATE, "internal", "gamma_rate")).item<double>();
+  auto rate1 = out1.at(neml2::VariableName(neml2::STATE, "internal", "gamma_rate")).item<double>();
+  auto rate2 = out2.at(neml2::VariableName(neml2::STATE, "internal", "gamma_rate")).item<double>();
 
   // Higher plastic strain means higher yield stress,
   // so same applied stress gives lower flow rate

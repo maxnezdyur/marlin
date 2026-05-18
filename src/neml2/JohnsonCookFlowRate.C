@@ -39,7 +39,8 @@ JohnsonCookFlowRate::expected_options()
   options.set("equivalent_plastic_strain").doc() = "Equivalent plastic strain";
 
   options.set_input("temperature") = VariableName(FORCES, "T");
-  options.set("temperature").doc() = "Temperature (optional - set use_temperature=false to disable)";
+  options.set("temperature").doc() =
+      "Temperature (optional - set use_temperature=false to disable)";
 
   options.set<bool>("use_temperature") = true;
   options.set("use_temperature").doc() = "Whether to include temperature effects";
@@ -118,7 +119,7 @@ JohnsonCookFlowRate::set_value(bool out, bool dout_din, bool /*d2out_din2*/)
     const auto dT = _T_melt - _T_ref;
     T_star = ((*_T)() - _T_ref) / dT;
     // Clamp T* to [0, 0.9999] to avoid Theta = 0 or negative
-    T_star = macaulay(T_star);  // max(T_star, 0)
+    T_star = macaulay(T_star); // max(T_star, 0)
     const auto T_star_max = Scalar::full(0.9999, _s.options());
     // Use torch minimum
     const auto T_star_clamped = T_star - macaulay(T_star - T_star_max);
@@ -135,7 +136,7 @@ JohnsonCookFlowRate::set_value(bool out, bool dout_din, bool /*d2out_din2*/)
   const auto sigma_y = H * Theta;
 
   // Stress ratio: ratio = sigma_vm / sigma_y
-  const auto sigma_y_safe = sigma_y + eps_min;  // Avoid division by zero
+  const auto sigma_y_safe = sigma_y + eps_min; // Avoid division by zero
   const auto ratio = _s() / sigma_y_safe;
 
   // Exponential argument: (ratio - 1) / C
@@ -145,8 +146,8 @@ JohnsonCookFlowRate::set_value(bool out, bool dout_din, bool /*d2out_din2*/)
   const auto exp_arg = (ratio - one) / _C;
   const auto exp_arg_max = Scalar::full(700.0, _s.options());
   const auto exp_arg_min = Scalar::full(-700.0, _s.options());
-  const auto exp_arg_clamped = exp_arg - macaulay(exp_arg - exp_arg_max) +
-                               macaulay(exp_arg_min - exp_arg);
+  const auto exp_arg_clamped =
+      exp_arg - macaulay(exp_arg - exp_arg_max) + macaulay(exp_arg_min - exp_arg);
 
   // Flow rate: ep_dot = eps0 * exp(exp_arg) * H(ratio - 1)
   // Using Heaviside to ensure no plastic flow when below yield

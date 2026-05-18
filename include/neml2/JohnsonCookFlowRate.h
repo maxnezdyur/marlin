@@ -21,7 +21,8 @@ class Scalar;
  *
  * Computes the equivalent plastic strain rate using the inverted Johnson-Cook equation:
  * \f[
- *   \dot{\varepsilon}_p = \dot{\varepsilon}_0 \exp\left(\frac{\sigma_{vm} / (\sigma_y \Theta) - 1}{C}\right) H(\sigma_{vm} - \sigma_y \Theta)
+ *   \dot{\varepsilon}_p = \dot{\varepsilon}_0 \exp\left(\frac{\sigma_{vm} / (\sigma_y \Theta) -
+ * 1}{C}\right) H(\sigma_{vm} - \sigma_y \Theta)
  * \f]
  *
  * where:
