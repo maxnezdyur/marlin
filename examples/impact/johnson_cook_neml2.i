@@ -34,7 +34,7 @@
   [cauchy_stress]
     type = LinearIsotropicElasticity
     coefficient_types = 'YOUNGS_MODULUS POISSONS_RATIO'
-    coefficients = '70e9 0.28'
+    coefficients = '117e9 0.34' # OFHC copper (was 70e9 0.28 -- aluminum placeholder)
     strain = 'state/Ee'
     stress = 'state/S'
   []

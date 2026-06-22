@@ -1,8 +1,17 @@
 # timestep in seconds
 dt = 1e-8
 
-# velocity in m/s
-v = 200
+# impact velocity in m/s (experiment CuH04_235.9_003 -> 235.9 m/s)
+v = 235.9
+
+# slug radius -- real specimen is Ø8 mm OFHC copper, so r = 4 mm
+r = '${units 4 mm -> m}'
+
+# slug length -- WORKING VALUE, confirm from experiment records (~30 mm)
+slug_length = '${units 30 mm -> m}'
+
+# impact tilt angle in degrees (this shot is flat-on => 0)
+alpha = 0
 
 [GlobalParams]
   displacements = 'disp_x disp_y disp_z'
@@ -57,7 +66,7 @@ v = 200
   [disc]
     type = ConcentricCircleMeshGenerator
     num_sectors = 8 # adjust for mesh resolution
-    radii = '${units 0.25 in -> m}'
+    radii = '${r}'
     rings = 10 # adjust for mesh resolution
     has_outer_square = false
     preserve_volumes = true
@@ -73,7 +82,7 @@ v = 200
     type = AdvancedExtruderGenerator
     input = rotate_x_90
     direction = '0 1 0'
-    heights = '${units 3 in -> m}'
+    heights = '${slug_length}'
     num_layers = 50 # adjust for mesh resolution
   []
   [impact_face]
@@ -89,6 +98,22 @@ v = 200
     input = impact_face
     new_boundary = back_face
     normal = '0 1 0'
+  []
+  # cant the slug for oblique impact: rotate alpha degrees about z (first Euler angle).
+  # must come AFTER the sidesets so the normal-based detection still sees the y-aligned cylinder.
+  [tilt]
+    type = TransformGenerator
+    input = back_face
+    transform = ROTATE
+    vector_value = '${alpha} 0 0'
+  []
+  # raise the slug so the lowest tilted corner of the impact face just touches y=0,
+  # matching the flat-on zero-gap start and avoiding initial penetration of the anvil.
+  [standoff]
+    type = TransformGenerator
+    input = tilt
+    transform = TRANSLATE
+    vector_value = '0 ${fparse r * sin(abs(alpha) * pi / 180)} 0'
   []
 []
 
@@ -134,7 +159,7 @@ v = 200
   # []
   [slug_density]
     type = StrainAdjustedDensity
-    strain_free_density = '${units 2700 kg/m^3}'
+    strain_free_density = '${units 8960 kg/m^3}' # OFHC copper
   []
 []
 
