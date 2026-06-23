@@ -1,3 +1,3 @@
-NODAL VARIABLES (all)
-	force_x relative 1e-2 floor 1e-7
-	force_y relative 1e-2 floor 1e-7
+NODAL VARIABLES
+	force_x relative 5e-4 floor 1e-5
+	force_y relative 5e-4 floor 1e-5

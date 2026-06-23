@@ -32,47 +32,26 @@ JohnsonCookFlowRate::expected_options()
       "where \\f$ \\sigma_y = A + B \\varepsilon_p^n \\f$ and \\f$ \\Theta = 1 - T^{*m} \\f$.";
 
   // Input variables
-  options.set_input("vonmises_stress") = VariableName(STATE, "internal", "s");
-  options.set("vonmises_stress").doc() = "Von Mises stress";
+  options.add_input("vonmises_stress", "Von Mises stress");
+  options.add_input("equivalent_plastic_strain", "Equivalent plastic strain");
+  options.add_optional_input("temperature",
+                             "Temperature (optional - set use_temperature=false to disable)");
 
-  options.set_input("equivalent_plastic_strain") = VariableName(STATE, "internal", "ep");
-  options.set("equivalent_plastic_strain").doc() = "Equivalent plastic strain";
-
-  options.set_input("temperature") = VariableName(FORCES, "T");
-  options.set("temperature").doc() =
-      "Temperature (optional - set use_temperature=false to disable)";
-
-  options.set<bool>("use_temperature") = true;
-  options.set("use_temperature").doc() = "Whether to include temperature effects";
+  options.add<bool>("use_temperature", true, "Whether to include temperature effects");
 
   // Output
-  options.set_output("flow_rate") = VariableName(STATE, "internal", "gamma_rate");
-  options.set("flow_rate").doc() = "Plastic flow rate (consistency parameter rate)";
+  options.add_output("flow_rate", "Plastic flow rate (consistency parameter rate)");
 
   // Johnson-Cook parameters
-  options.set_parameter<TensorName<Scalar>>("A");
-  options.set("A").doc() = "Reference yield stress (Pa)";
+  options.add_parameter<Scalar>("A", "Reference yield stress (Pa)");
+  options.add_parameter<Scalar>("B", "Hardening coefficient (Pa)");
+  options.add_parameter<Scalar>("n", "Strain hardening exponent");
+  options.add_parameter<Scalar>("C", "Rate sensitivity coefficient");
+  options.add_parameter<Scalar>("m", "Temperature sensitivity exponent");
+  options.add_parameter<Scalar>("reference_strain_rate", "Reference strain rate (1/s)");
 
-  options.set_parameter<TensorName<Scalar>>("B");
-  options.set("B").doc() = "Hardening coefficient (Pa)";
-
-  options.set_parameter<TensorName<Scalar>>("n");
-  options.set("n").doc() = "Strain hardening exponent";
-
-  options.set_parameter<TensorName<Scalar>>("C");
-  options.set("C").doc() = "Rate sensitivity coefficient";
-
-  options.set_parameter<TensorName<Scalar>>("m");
-  options.set("m").doc() = "Temperature sensitivity exponent";
-
-  options.set_parameter<TensorName<Scalar>>("reference_strain_rate");
-  options.set("reference_strain_rate").doc() = "Reference strain rate (1/s)";
-
-  options.set<double>("reference_temperature") = 300.0;
-  options.set("reference_temperature").doc() = "Reference temperature (K)";
-
-  options.set<double>("melting_temperature") = 1338.0;
-  options.set("melting_temperature").doc() = "Melting temperature (K)";
+  options.add<double>("reference_temperature", 300.0, "Reference temperature (K)");
+  options.add<double>("melting_temperature", 1338.0, "Melting temperature (K)");
 
   return options;
 }
@@ -162,7 +141,6 @@ JohnsonCookFlowRate::set_value(bool out, bool dout_din, bool /*d2out_din2*/)
   if (dout_din)
   {
     // Derivative with respect to von Mises stress
-    if (_s.is_dependent())
     {
       // d(ep_dot)/d(s) = eps0 * exp(exp_arg) * H(ratio-1) * (1 / (C * sigma_y))
       // Note: We ignore the delta function from Heaviside derivative
@@ -171,7 +149,6 @@ JohnsonCookFlowRate::set_value(bool out, bool dout_din, bool /*d2out_din2*/)
     }
 
     // Derivative with respect to equivalent plastic strain
-    if (_ep.is_dependent())
     {
       // d(ep_dot)/d(ep) through the strain hardening H
       // dH/dep = B * n * ep^(n-1)
@@ -188,7 +165,7 @@ JohnsonCookFlowRate::set_value(bool out, bool dout_din, bool /*d2out_din2*/)
     }
 
     // Derivative with respect to temperature
-    if (_T && _T->is_dependent())
+    if (_T)
     {
       // d(Theta)/d(T) = -m * T*^(m-1) * (1 / (T_melt - T_ref))
       const auto dT = _T_melt - _T_ref;

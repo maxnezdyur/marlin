@@ -108,24 +108,9 @@ v = 200
     executor_name = 'neml2'
     model = 'model'
     verbose = false
-    keep_tensors_on_device = true
-    moose_input_kernels = 'strain'
-
-    moose_input_types = 'POSTPROCESSOR POSTPROCESSOR POSTPROCESSOR'
-    moose_inputs = '     time          time          temperature'
-    neml2_inputs = '     forces/t      old_forces/t  forces/T'
-  []
-[]
-
-[Postprocessors]
-  [time]
-    type = TimePostprocessor
-    execute_on = 'INITIAL TIMESTEP_BEGIN'
-    outputs = 'none'
-  []
-  [temperature]
-    type = ConstantPostprocessor
-    value = 300
+    manage_state_advance = true
+    auto_output = false
+    input_kernels = 'neml2_strain'
   []
 []
 
@@ -137,11 +122,11 @@ v = 200
     type = NEML2FEInterpolation
     assembly = 'assembly'
   []
-  [strain]
+  [neml2_strain]
     type = NEML2SmallStrain
     assembly = 'assembly'
     fe = 'fe'
-    to_neml2 = 'forces/E'
+    to_neml2 = 'neml2_strain'
   []
   [residual]
     type = NEML2StressDivergence

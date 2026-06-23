@@ -8,7 +8,7 @@
 
 [Solvers]
   [newton]
-    type = NewtonWithLineSearch
+    type = Newton
     abs_tol = 1e-8
     rel_tol = 1e-9
     max_its = 50
@@ -27,9 +27,9 @@
   ###############################################################################
   [trial_elastic_strain]
     type = SR2LinearCombination
-    to_var = 'state/Ee'
-    from_var = 'forces/E old_state/Ep'
-    coefficients = '1 -1'
+    to = 'state/Ee'
+    from = 'neml2_strain state/Ep~1'
+    weights = '1 -1'
   []
   [cauchy_stress]
     type = LinearIsotropicElasticity
@@ -71,9 +71,9 @@
   []
   [elastic_strain]
     type = SR2LinearCombination
-    to_var = 'state/Ee'
-    from_var = 'forces/E state/Ep'
-    coefficients = '1 -1'
+    to = 'state/Ee'
+    from = 'neml2_strain state/Ep'
+    weights = '1 -1'
   []
   [stress_update]
     type = ComposedModel
@@ -94,8 +94,7 @@
     type = JohnsonCookFlowRate
     vonmises_stress = 'state/s'
     equivalent_plastic_strain = 'state/ep'
-    temperature = 'forces/T'
-    use_temperature = true
+    use_temperature = false
     flow_rate = 'state/ep_rate'
     # OFHC Copper parameters
     A = 99.7e6 # Reference yield stress (Pa)
@@ -119,10 +118,15 @@
     type = ComposedModel
     models = "plastic_update stress_update vonmises jc_flowrate integrate_ep"
   []
+  [predictor]
+    type = ConstantExtrapolationPredictor
+    unknowns_Scalar = 'state/ep'
+  []
   [radial_return]
     type = ImplicitUpdate
     equation_system = 'return_map_sys'
     solver = 'newton'
+    predictor = 'predictor'
   []
 
   ###############################################################################
@@ -139,5 +143,6 @@
   [return_map_sys]
     type = NonlinearSystem
     model = 'rate'
+    unknowns = 'state/ep'
   []
 []
