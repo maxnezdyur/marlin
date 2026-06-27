@@ -78,6 +78,11 @@ protected:
 
   /// Melting temperature
   const double _T_melt;
+
+  /// Prior accumulated equivalent plastic strain (e.g. cold-work / temper offset);
+  /// added to the evolving plastic strain in the hardening term so the material
+  /// starts pre-hardened (full-hard temper). Default 0 = annealed.
+  const double _ep0;
 };
 } // namespace neml2
 

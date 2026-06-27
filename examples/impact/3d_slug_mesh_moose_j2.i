@@ -4,14 +4,17 @@ dt = 1e-8
 # impact velocity in m/s (experiment CuH04_235.9_003 -> 235.9 m/s)
 v = 235.9
 
-# slug radius -- real specimen is Ø8 mm OFHC copper, so r = 4 mm
-r = '${units 4 mm -> m}'
-
-# slug length -- WORKING VALUE, confirm from experiment records (~30 mm)
-slug_length = '${units 30 mm -> m}'
+# --- TRUE specimen geometry (MEML2 shot CuH04): Ø0.3 in x 1.5 in, full-hard pure copper ---
+r = '${units 0.15 in -> m}'          # 0.3 in diameter  -> 0.15 in radius
+slug_length = '${units 1.5 in -> m}' # 1.5 in length
 
 # impact tilt angle in degrees (this shot is flat-on => 0)
 alpha = 0
+
+# --- mesh resolution (COARSE on purpose: cheap enough to run long to rebound) ---
+n_sectors = 4
+n_rings = 2
+n_layers = 15
 
 [GlobalParams]
   displacements = 'disp_x disp_y disp_z'
@@ -65,9 +68,9 @@ alpha = 0
 [Mesh]
   [disc]
     type = ConcentricCircleMeshGenerator
-    num_sectors = 8 # adjust for mesh resolution
+    num_sectors = '${n_sectors}'
     radii = '${r}'
-    rings = 10 # adjust for mesh resolution
+    rings = '${n_rings}'
     has_outer_square = false
     preserve_volumes = true
     smoothing_max_it = 3
@@ -83,7 +86,7 @@ alpha = 0
     input = rotate_x_90
     direction = '0 1 0'
     heights = '${slug_length}'
-    num_layers = 50 # adjust for mesh resolution
+    num_layers = '${n_layers}'
   []
   [impact_face]
     type = SideSetsAroundSubdomainGenerator
@@ -259,6 +262,40 @@ alpha = 0
     type = ConstantPostprocessor
     value = 300
   []
+  # COM axial position (volume-averaged disp_y); reaches its minimum at rebound.
+  [disp_y_avg]
+    type = ElementAverageValue
+    variable = disp_y
+    execute_on = 'INITIAL TIMESTEP_END'
+  []
+  # per-step change in COM position (m); finite-difference source for velocity.
+  [d_disp_y]
+    type = ChangeOverTimePostprocessor
+    postprocessor = disp_y_avg
+    change_with_respect_to_initial = false
+    execute_on = 'INITIAL TIMESTEP_END'
+  []
+  # center-of-mass axial velocity (m/s) = d(COM disp)/dt. Starts near -235.9,
+  # climbs through 0 (total velocity stops) and goes positive on rebound.
+  [vel_y_avg]
+    type = ParsedPostprocessor
+    pp_names = 'd_disp_y'
+    pp_symbols = 'dd'
+    expression = 'dd / ${dt}'
+    execute_on = 'INITIAL TIMESTEP_END'
+  []
+[]
+
+[UserObjects]
+  # stop as soon as the slug's average axial velocity reverses sign (rebound).
+  # fail_mode=HARD calls terminateSolve() -> graceful end of the run (exit 0).
+  [rebound]
+    type = Terminator
+    expression = 'vel_y_avg > 0'
+    fail_mode = HARD
+    execute_on = TIMESTEP_END
+    message = 'Slug COM axial velocity reversed -- rebound detected, stopping.'
+  []
 []
 
 [Executioner]
@@ -271,12 +308,26 @@ alpha = 0
   []
 
   start_time = 0.0
-  num_steps = 1000
+  # Arrest is flow-stress-limited (~150 us / ~15000 steps to stop, a bit more to
+  # rebound); cap generously, the rebound Terminator stops us at the reversal.
+  num_steps = 25000
   dt = '${units ${dt} s}'
   dtmin = '${units ${dt} s}'
 []
 
 [Outputs]
-  time_step_interval = 50
-  exodus = true
+  # exodus is heavy -> only every 100 steps; CSV is cheap scalars -> every step
+  # so the full velocity-vs-time rebound history is captured.
+  [exodus]
+    type = Exodus
+    time_step_interval = 100
+  []
+  [csv]
+    type = CSV
+    execute_on = 'INITIAL TIMESTEP_END'
+  []
+  [console]
+    type = Console
+    time_step_interval = 100
+  []
 []

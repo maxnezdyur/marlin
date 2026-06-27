@@ -52,6 +52,12 @@ JohnsonCookFlowRate::expected_options()
 
   options.add<double>("reference_temperature", 300.0, "Reference temperature (K)");
   options.add<double>("melting_temperature", 1338.0, "Melting temperature (K)");
+  options.add<double>(
+      "initial_plastic_strain",
+      0.0,
+      "Prior accumulated equivalent plastic strain from the specimen temper (e.g. ~0.37 for H04 "
+      "full-hard copper). Added to the evolving plastic strain in the hardening term, "
+      "sigma_y = A + B (ep + ep0)^n, so the material starts pre-hardened. Default 0 = annealed.");
 
   return options;
 }
@@ -70,7 +76,8 @@ JohnsonCookFlowRate::JohnsonCookFlowRate(const OptionSet & options)
     _m(declare_parameter<Scalar>("m", "m", /*allow_nonlinear=*/true)),
     _eps0(declare_parameter<Scalar>("eps0", "reference_strain_rate", /*allow_nonlinear=*/true)),
     _T_ref(options.get<double>("reference_temperature")),
-    _T_melt(options.get<double>("melting_temperature"))
+    _T_melt(options.get<double>("melting_temperature")),
+    _ep0(options.get<double>("initial_plastic_strain"))
 {
 }
 
@@ -82,10 +89,11 @@ JohnsonCookFlowRate::set_value(bool out, bool dout_din, bool /*d2out_din2*/)
   const auto one = Scalar::full(1.0, _s.options());
   const auto zero = Scalar::full(0.0, _s.options());
 
-  // Strain hardening: H = A + B * ep^n
-  // Use max(ep, eps_min) to avoid 0^n issues
+  // Strain hardening: H = A + B * (ep + ep0)^n, where ep0 is the prior cold-work
+  // strain from the temper (0 = annealed). max(ep,0) + ep0 + eps_min avoids 0^n.
+  const auto ep0 = Scalar::full(_ep0, _s.options());
   const auto ep_positive = macaulay(_ep());
-  const auto ep_safe = ep_positive + eps_min;
+  const auto ep_safe = ep_positive + ep0 + eps_min;
   const auto ep_pow_n = pow(ep_safe, _n);
   const auto H = _A + _B * ep_pow_n;
 

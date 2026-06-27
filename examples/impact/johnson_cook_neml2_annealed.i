@@ -108,7 +108,7 @@
     # CuH04 = H04 full-hard temper (~37% prior cold work). Seeding the prior
     # plastic strain makes the slug start at sigma_y = A + B*ep0^n ~ 309 MPa
     # (full hard) instead of the annealed A ~ 100 MPa. Set to 0 for annealed Cu.
-    initial_plastic_strain = 0.37
+    initial_plastic_strain = 0.0
   []
   [integrate_ep]
     type = ScalarBackwardEulerTimeIntegration

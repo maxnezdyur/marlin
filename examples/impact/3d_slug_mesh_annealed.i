@@ -188,7 +188,7 @@ n_layers = 15
 []
 
 [NEML2]
-  input = 'johnson_cook_neml2.i'
+  input = 'johnson_cook_neml2_annealed.i'
   [all]
     executor_name = 'neml2'
     model = 'model'
