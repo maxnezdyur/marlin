@@ -197,11 +197,13 @@
     # K    (MPa)
     # T... (deg C)
     # Cu: Appl. Sci. 2020, 10, 2423; doi:10.3390/app10072423
+    # NOTE: homologous temperature uses T_r = 300 K, (T-300)/(1338-300). The
+    # original T_r:=0 with T in Kelvin over-softens badly once T evolves.
     expression = 'A:=${units 99.7 MPa -> Pa};
                   B:=${units 262.8 MPa -> Pa};
                   C:=0.029;
                   n:=0.23; m:=0.98; ep_dot_0:=1;
-                  T_r:=0; T_m:=1338; T_star:=(T-T_r)/(T_m-T_r); ep_dot_star:=max(1.0,ep_dot_recovered/ep_dot_0);
+                  T_r:=300; T_m:=1338; T_star:=(T-T_r)/(T_m-T_r); ep_dot_star:=max(1.0,ep_dot_recovered/ep_dot_0);
                   (A+B*if(ep>0, ep^n, 0))*(1+C*log(ep_dot_star))*(1-T_star^m)'
     material_property_names = 'ep:=Old[effective_plastic_strain]'
     coupled_variables = 'T ep_dot_recovered'
@@ -323,7 +325,7 @@
 [Executioner]
   type = Transient
   solve_type = NEWTON
-  dt = ${units 2e-8 s}
+  dt = ${units 1e-7 s} # implicit Newmark is unconditionally stable; 1e-7 keeps the run ~1.5h
   end_time = ${units 1.5e-4 s} # 150 microseconds
   automatic_scaling = true
   compute_scaling_once = false
