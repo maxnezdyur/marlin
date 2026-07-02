@@ -20,29 +20,33 @@ EQ_DIR = HERE / "eqs"
 EQ_DIR.mkdir(exist_ok=True)
 
 # ---------------------------------------------------------------- palette
-INK = RGBColor(0x16, 0x23, 0x3B)      # near-navy text / headings
-BODY = RGBColor(0x33, 0x3E, 0x4F)     # body text
-MUTED = RGBColor(0x6B, 0x76, 0x88)    # kickers, captions, footer
-FAINT = RGBColor(0xAB, 0xB4, 0xC2)    # hairlines
-BLUE = RGBColor(0x1B, 0x5F, 0xA8)     # primary accent
-BLUE_T = RGBColor(0xE7, 0xEF, 0xF8)   # blue tint fill
-GREEN = RGBColor(0x1E, 0x7A, 0x4F)    # "this work" accent
-GREEN_T = RGBColor(0xE4, 0xF2, 0xEA)  # green tint fill
-RED = RGBColor(0xA8, 0x3A, 0x33)      # bottleneck accent
-RED_T = RGBColor(0xF8, 0xE9, 0xE7)    # red tint fill
-GOLD = RGBColor(0x8A, 0x5A, 0x0F)     # takeaway accent
-GOLD_T = RGBColor(0xFA, 0xF1, 0xDE)   # takeaway fill
-CARD = RGBColor(0xF4, 0xF6, 0xFA)     # neutral card fill
-CARD_LN = RGBColor(0xD9, 0xDF, 0xE8)  # neutral card border
+# INL 2022 brand theme (from INL_2022_hexLight_wide.potx theme1.xml)
+INK = RGBColor(0x1E, 0x24, 0x30)      # near-black body headings inside cards
+BODY = RGBColor(0x3A, 0x3F, 0x47)     # body text
+MUTED = RGBColor(0x59, 0x59, 0x5C)    # INL gray — captions, secondary
+FAINT = RGBColor(0xB6, 0xBA, 0xBF)    # hairlines
+BLUE = RGBColor(0x06, 0x50, 0x9D)     # INL blue — primary accent
+BLUE_T = RGBColor(0xE6, 0xEE, 0xF7)   # blue tint fill
+SKY = RGBColor(0x2C, 0xA8, 0xE1)      # INL light blue
+GREEN = RGBColor(0x5E, 0x86, 0x14)    # darkened INL green for text/strokes
+GREEN_BRAND = RGBColor(0x8E, 0xC4, 0x23)  # INL lime green (fills/stripes)
+GREEN_T = RGBColor(0xEF, 0xF6, 0xDF)  # green tint fill
+RED = RGBColor(0xCF, 0x1D, 0x4C)      # INL crimson — bottleneck accent
+RED_T = RGBColor(0xFA, 0xE8, 0xED)    # red tint fill
+GOLD = RGBColor(0xB4, 0x62, 0x0B)     # takeaway accent (from INL orange)
+GOLD_T = RGBColor(0xFD, 0xF0, 0xDF)   # takeaway fill
+CARD = RGBColor(0xF4, 0xF5, 0xF7)     # neutral card fill
+CARD_LN = RGBColor(0xDA, 0xDD, 0xE2)  # neutral card border
 WHITE = RGBColor(0xFF, 0xFF, 0xFF)
 
-FONT = "Calibri"
+FONT = "Arial"
 
 PAGE_W = Inches(13.333)
 PAGE_H = Inches(7.5)
 MARGIN = Inches(0.62)
+FOOTER_TOP = Inches(6.7)  # INL green stripe + blue band start ~6.72in — keep clear
 
-EQ_HEX = "16233B"  # must match INK
+EQ_HEX = "1E2430"  # must match INK
 
 # ---------------------------------------------------------------- equations
 EQ_TEMPLATE = r"""\documentclass[border=1.5pt,varwidth=8in]{standalone}
@@ -297,23 +301,57 @@ def shape_text(sh, runs, size=13, color=INK, bold=False, align=PP_ALIGN.CENTER,
     return sh
 
 
+# ---------------------------------------------------------------- INL base
+INL_POTX = HERE.parent / "INL_2022_hexLight_wide.potx"
+
+
+def load_inl_base():
+    """Patch the INL .potx into a .pptx base, open it, strip its sample slides."""
+    import zipfile
+
+    from pptx import Presentation
+
+    base = HERE / "inl_base.pptx"
+    if not base.exists() or base.stat().st_mtime < INL_POTX.stat().st_mtime:
+        with zipfile.ZipFile(INL_POTX) as zin, \
+                zipfile.ZipFile(base, "w", zipfile.ZIP_DEFLATED) as zout:
+            for item in zin.infolist():
+                data = zin.read(item.filename)
+                if item.filename == "[Content_Types].xml":
+                    data = data.replace(
+                        b"presentationml.template.main+xml",
+                        b"presentationml.presentation.main+xml")
+                zout.writestr(item, data)
+    prs = Presentation(base)
+    # drop the template's sample slides
+    for sldId in list(prs.slides._sldIdLst):
+        prs.part.drop_rel(sldId.get(qn("r:id")))
+        prs.slides._sldIdLst.remove(sldId)
+    return prs
+
+
+def inl_layout(prs, name):
+    for master in prs.slide_masters:
+        for lo in master.slide_layouts:
+            if lo.name == name:
+                return lo
+    raise KeyError(f"layout {name!r} not in template")
+
+
 # ---------------------------------------------------------------- chrome
 def new_slide(prs, kicker=None, title=None, number=None, total=None,
-              foot="NEML2 × MOOSE — explicit dynamics"):
-    slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank
-    # kicker intentionally not rendered (kept in signature for call compatibility)
+              foot=None):
+    """Content slide on the INL 'Blank Full Footer' layout (green stripe +
+    blue INL band come from the layout; keep custom content above FOOTER_TOP)."""
+    slide = prs.slides.add_slide(inl_layout(prs, "Blank Full Footer"))
     if title:
-        add_text(slide, MARGIN, Inches(0.52), PAGE_W - 2 * MARGIN, Inches(0.75),
-                 title, size=27, color=INK, bold=True)
-        add_line(slide, MARGIN, Inches(1.18), MARGIN + Inches(0.85), Inches(1.18),
-                 color=BLUE, weight=2.25)
+        ph = slide.shapes.title
+        ph.text = title
+        for p in ph.text_frame.paragraphs:
+            for r in p.runs:
+                r.font.size = Pt(26)
     if number:
-        add_line(slide, MARGIN, PAGE_H - Inches(0.42), PAGE_W - MARGIN,
-                 PAGE_H - Inches(0.42), color=FAINT, weight=0.5)
-        add_text(slide, MARGIN, PAGE_H - Inches(0.36), Inches(6), Inches(0.25),
-                 foot, size=8.5, color=MUTED)
-        add_text(slide, PAGE_W - MARGIN - Inches(1.0), PAGE_H - Inches(0.36),
-                 Inches(1.0), Inches(0.25),
+        add_text(slide, PAGE_W - Inches(1.05), Inches(0.3), Inches(0.75), Inches(0.25),
                  f"{number}" + (f" / {total}" if total else ""),
-                 size=8.5, color=MUTED, align=PP_ALIGN.RIGHT)
+                 size=9, color=MUTED, align=PP_ALIGN.RIGHT)
     return slide

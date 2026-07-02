@@ -10,29 +10,27 @@ classes from framework/src/neml2/* and modules/solid_mechanics/src/neml2/*.
 import sys
 from pathlib import Path
 
-from pptx import Presentation
 from pptx.enum.text import MSO_ANCHOR, PP_ALIGN
 from pptx.util import Inches, Pt
 
 from deckkit import (BLUE, BLUE_T, BODY, CARD, CARD_LN, FAINT, GOLD, GOLD_T,
                      GREEN, GREEN_T, INK, MARGIN, MUTED, PAGE_H, PAGE_W, RED,
-                     RED_T, WHITE, add_arrow, add_bullets, add_card, add_eq,
-                     add_line, add_rect, add_text, new_slide, shape_text)
+                     RED_T, SKY, WHITE, add_arrow, add_bullets, add_card,
+                     add_eq, add_line, add_rect, add_text, inl_layout,
+                     load_inl_base, new_slide, shape_text)
 
 HERE = Path(__file__).resolve().parent
 OUT = Path(sys.argv[1]) if len(sys.argv) > 1 else HERE.parent / "WCCM_NEML2_explicit_dynamics_v2.pptx"
 
-prs = Presentation()
-prs.slide_width = PAGE_W
-prs.slide_height = PAGE_H
+prs = load_inl_base()
 
 TOTAL = 12
-BODY_TOP = Inches(1.66)
+BODY_TOP = Inches(1.32)
 CONTENT_W = PAGE_W - 2 * MARGIN
 MONO = "Consolas"
 
 
-def takeaway(s, text_segs, y=Inches(6.14), fill=GOLD_T, line=GOLD):
+def takeaway(s, text_segs, y=Inches(5.9), fill=GOLD_T, line=GOLD):
     add_card(s, MARGIN, y, CONTENT_W, Inches(0.72), fill=fill, line=line, line_w=1.0)
     add_text(s, MARGIN + Inches(0.3), y, CONTENT_W - Inches(0.6), Inches(0.72),
              [text_segs], size=15, color=BODY, anchor=MSO_ANCHOR.MIDDLE)
@@ -48,24 +46,25 @@ def pow10(a, b=None):
 
 # ================================================================ 1 TITLE
 def s01_title():
-    s = new_slide(prs)
-    add_rect(s, 0, 0, PAGE_W, Inches(0.14), BLUE)
-    add_text(s, MARGIN, Inches(2.05), CONTENT_W, Inches(1.6),
-             ["GPU-resident material models",
-              "for explicit dynamics in MOOSE"],
-             size=40, color=INK, bold=True, leading=1.04)
-    add_text(s, MARGIN, Inches(3.72), CONTENT_W, Inches(0.4),
-             "A NEML2 nodal-force interface for high-rate solid mechanics",
-             size=19, color=BLUE)
-    add_line(s, MARGIN, Inches(4.5), Inches(4.2), Inches(4.5), color=FAINT, weight=0.75)
-    add_text(s, MARGIN, Inches(4.7), CONTENT_W, Inches(0.35),
-             [[("Author Name", {"bold": True, "color": INK}),
-               ("   with Co-author, Co-author, Co-author", {})]],
-             size=15, color=BODY)
-    add_text(s, MARGIN, Inches(5.1), CONTENT_W, Inches(0.3),
-             "Idaho National Laboratory", size=13, color=MUTED)
-    add_text(s, MARGIN, Inches(6.3), CONTENT_W, Inches(0.3),
-             "WCCM 2026   |   Session   |   Date", size=12, color=MUTED)
+    s = prs.slides.add_slide(inl_layout(prs, "Title Slide Hex_01"))
+    for ph in s.placeholders:
+        idx = ph.placeholder_format.idx
+        if idx == 13:  # main title block
+            tf = ph.text_frame
+            tf.text = "GPU-resident material models for explicit dynamics in MOOSE"
+            sub = tf.add_paragraph()
+            r = sub.add_run()
+            r.text = "A NEML2 nodal-force interface for high-rate solid mechanics"
+            r.font.size = Pt(18)
+            r.font.bold = False
+            r.font.color.rgb = SKY
+        elif idx == 16:  # top-left presenter block
+            tf = ph.text_frame
+            tf.text = "WCCM 2026"
+            p2 = tf.add_paragraph()
+            p2.text = "Author Name & Co-authors"
+            p3 = tf.add_paragraph()
+            p3.text = "Idaho National Laboratory"
 
 
 # ================================================================ 2 MOTIVATION
@@ -108,7 +107,7 @@ def s02_motivation():
         add_text(s, px + pw - Inches(1.95), ry, Inches(1.55), Inches(0.72),
                  [val_segs], size=15, align=PP_ALIGN.RIGHT, anchor=MSO_ANCHOR.MIDDLE)
         ry += Inches(0.87)
-    takeaway(s, [("Many steps × an expensive material update at every point:", {"bold": True, "color": INK}),
+    takeaway(s, [("Many steps × expensive material updates:", {"bold": True, "color": INK}),
                  (" high-rate simulation is compute-hungry in a very particular way.", {})])
 
 
