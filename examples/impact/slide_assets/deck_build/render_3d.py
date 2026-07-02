@@ -249,62 +249,99 @@ def _load_2d(fn):
 
 
 def _render_2d(d, vals, cmap, clim, px_w=2400):
-    """Flat crisp render of the deformed 2D mesh (axial horizontal)."""
+    """Shaded 3-D slab render of the deformed 2D verification mesh — the 2D
+    quads are extruded to thin hexes so the panel matches the deck's 3-D look."""
     ax_c = (d["y"] + d["dy"]) * 1e3
     r_c = (d["x"] + d["dx"]) * 1e3
-    pts = np.stack([ax_c, r_c, np.zeros_like(ax_c)], axis=1)
+    n_nodes = len(ax_c)
+    th = (r_c.max() - r_c.min()) * 0.55   # slab thickness
+    bottom = np.stack([ax_c, r_c, np.zeros(n_nodes)], axis=1)
+    top = bottom + np.array([0, 0, th])
+    pts = np.vstack([bottom, top])
     n = len(d["conn"])
-    faces = np.hstack([np.full((n, 1), 4), d["conn"]]).ravel()
-    surf = pv.PolyData(pts, faces)
-    surf.point_data["f"] = np.array(vals, dtype=float, copy=True)
-    w = ax_c.max() - ax_c.min()
-    h = (r_c.max() - r_c.min()) * 2.2
-    pl = pv.Plotter(off_screen=True, window_size=(px_w, max(int(px_w * h / w / 2), 140)))
+    hexes = np.hstack([np.full((n, 1), 8), d["conn"], d["conn"] + n_nodes]).ravel()
+    celltypes = np.full(n, pv.CellType.HEXAHEDRON, dtype=np.uint8)
+    gr = pv.UnstructuredGrid(hexes, celltypes, pts)
+    gr.point_data["f"] = np.tile(np.array(vals, dtype=float, copy=True), 2)
+    pl = pv.Plotter(off_screen=True, window_size=(px_w, 520))
     pl.set_background("white")
-    pl.add_mesh(surf, scalars="f", cmap=cmap, clim=clim, show_edges=True,
-                edge_color="white", line_width=1.2, lighting=False,
+    pl.add_mesh(gr, scalars="f", cmap=cmap, clim=clim, smooth_shading=False,
+                show_edges=True, edge_color=[1.0, 1.0, 1.0], line_width=1.0,
+                specular=0.15, specular_power=10, diffuse=0.9, ambient=0.4,
                 show_scalar_bar=False)
     pl.enable_parallel_projection()
-    ctr = np.array(surf.center)
-    pl.camera_position = [tuple(ctr + np.array([0, 0, 100])), tuple(ctr), (0, 1, 0)]
-    pl.camera.parallel_scale = (r_c.max() - r_c.min()) * 0.62
+    ctr = np.array(gr.center)
+    cam_dir = np.array([0.18, 0.55, 1.0])
+    pos = ctr + cam_dir / np.linalg.norm(cam_dir) * 200
+    pl.camera_position = [tuple(pos), tuple(ctr), (0, 1, 0)]
+    pl.camera.parallel_scale = (r_c.max() - r_c.min()) * 1.35
     img = pl.screenshot(transparent_background=True, return_img=True)
     pl.close()
     return _autocrop(img, pad=4)
 
 
 def verification_figure():
+    """Log-scale error ladder: where the measured path-to-path differences sit
+    relative to tolerances the audience knows. No mesh, no fields — the number."""
     M = _load_2d(os.path.join(TESTS, "gold/slug_2d.e"))
     E = _load_2d(os.path.join(TESTS, "slug_2d.e"))
-    fM = np.hypot(M["fx"], M["fy"]) * 1e-3   # kN
-    fE = np.hypot(E["fx"], E["fy"]) * 1e-3
-    dvec = np.hypot(M["fx"] - E["fx"], M["fy"] - E["fy"]) * 1e-3
-    diff = dvec / fM.max()
-    vmax = max(fM.max(), fE.max())
+    f_diff = (np.hypot(M["fx"] - E["fx"], M["fy"] - E["fy"])
+              / np.hypot(M["fx"], M["fy"]).max()).max()
+    floor = 1e-5
+    def rel(a, b):
+        return (np.abs(a - b) / np.maximum(np.maximum(np.abs(a), np.abs(b)), floor)).max()
+    d_diff = max(rel(M["dx"], E["dx"]), rel(M["dy"], E["dy"]))
 
-    img1 = _render_2d(M, fM, "viridis", (0, vmax))
-    img2 = _render_2d(E, fE, "viridis", (0, vmax))
-    img3 = _render_2d(M, diff * 1e8, "inferno", (0, 3))
+    fig, ax = plt.subplots(figsize=(7.7, 3.4))
+    ax.set_xscale("log")
+    ax.set_xlim(3e-9, 3e-1)
+    ax.invert_xaxis()                       # smaller error -> further right
+    ax.set_ylim(0, 1)
+    ax.get_yaxis().set_visible(False)
+    for side in ("left", "top", "right"):
+        ax.spines[side].set_visible(False)
+    axis_y = 0.52
+    ax.spines["bottom"].set_position(("axes", axis_y))
+    ax.set_xticks([1e-1, 1e-2, 1e-3, 1e-4, 1e-5, 1e-6, 1e-7, 1e-8])
+    ax.tick_params(labelsize=11.5, colors=GRAY)
+    ax.set_xlabel("relative difference between the two force paths  (log scale — right is better)",
+                  fontsize=12.5, labelpad=10)
 
-    fig = plt.figure(figsize=(10.0, 3.55))
-    gs = fig.add_gridspec(3, 2, width_ratios=[1, 0.018], hspace=0.75, wspace=0.03)
-    titles = ["MOOSE native J2  —  internal nodal force magnitude (kN)",
-              "NEML2 force path  —  same field",
-              r"difference, relative to peak force   $(\times 10^{-8})$"]
-    for i, (im, ti) in enumerate(zip([img1, img2, img3], titles)):
-        ax = fig.add_subplot(gs[i, 0])
-        ax.imshow(im)
-        ax.set_axis_off()
-        ax.set_title(ti, fontsize=12.5, loc="left", pad=3)
-    for rows, cmap_, clim_ in ((slice(0, 2), "viridis", (0, vmax)), (slice(2, 3), "inferno", (0, 3))):
-        axc = fig.add_subplot(gs[rows, 1])
-        sm = plt.cm.ScalarMappable(norm=colors.Normalize(*clim_), cmap=cmap_)
-        cb = fig.colorbar(sm, cax=axc)
-        cb.ax.tick_params(labelsize=11, color=GRAY, labelcolor=GRAY)
-        cb.outline.set_edgecolor(FAINT)
+    # floating-point noise zone straddling the axis
+    ax.axvspan(3e-9, 3e-7, ymin=0.42, ymax=0.62, color="#E9EDF3", zorder=0)
+    ax.annotate("floating-point noise", xy=(3.2e-8, 0.655), fontsize=11, color=GRAY,
+                ha="center", style="italic")
+
+    # reference tolerances (above the axis, hanging downward, staggered l/r)
+    ax.plot([1e-2], [axis_y], "o", color=GRAY, ms=9, zorder=5, clip_on=False)
+    ax.plot([5e-4], [axis_y], "o", color=GRAY, ms=9, zorder=5, clip_on=False)
+    ax.annotate("1%  “engineering\nagreement”", xy=(1.35e-2, 0.76), fontsize=11.5,
+                color=GRAY, ha="right", va="top", linespacing=1.25)
+    ax.annotate("exodiff regression\ntolerance  $5\\times10^{-4}$", xy=(3.6e-4, 0.76),
+                fontsize=11.5, color=GRAY, ha="left", va="top", linespacing=1.25)
+    # our measurements (markers on the axis, labels below the axis caption)
+    green = "#5E8614"
+    ax.plot([f_diff], [axis_y], "D", color=BLUE, ms=13, zorder=6, clip_on=False)
+    ax.plot([d_diff], [axis_y], "D", color=green, ms=13, zorder=6, clip_on=False)
+    ax.annotate("nodal forces  $3\\times10^{-8}$", xy=(f_diff * 0.9, 0.20),
+                fontsize=12.5, color=BLUE, ha="left", fontweight="bold")
+    ax.annotate("displacements  $8\\times10^{-8}$", xy=(d_diff * 1.3, 0.06),
+                fontsize=12.5, color=green, ha="right", fontweight="bold")
+    ax.plot([f_diff, f_diff * 0.95], [axis_y - 0.03, 0.265], "-", color=BLUE,
+            lw=0.9, clip_on=False)
+    ax.plot([d_diff, d_diff * 1.22], [axis_y - 0.03, 0.125], "-", color=green,
+            lw=0.9, clip_on=False)
+    # margin arrow across the top, headline above it
+    worst = max(f_diff, d_diff)
+    ratio = 5e-4 / worst
+    ax.annotate("", xy=(worst * 1.5, 0.86), xytext=(5e-4, 0.86),
+                arrowprops=dict(arrowstyle="->", color=INK, lw=1.8))
+    ax.annotate(f"{ratio/1000:.0f},000× tighter than the test suite requires",
+                xy=(np.sqrt(worst * 5e-4), 0.955), fontsize=13.5,
+                color=INK, ha="center", fontweight="bold")
     out = os.path.join(OUT, "fig_verification.png")
-    fig.savefig(out, dpi=200, bbox_inches="tight", pad_inches=0.1, facecolor="white")
-    print("wrote", out, f"| max diff/peak {diff.max():.2e}")
+    fig.savefig(out, dpi=200, bbox_inches="tight", pad_inches=0.15, facecolor="white")
+    print("wrote", out, f"| force {f_diff:.2e} disp {d_diff:.2e} margin {ratio:,.0f}x")
     plt.close(fig)
 
 

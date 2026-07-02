@@ -631,13 +631,13 @@ def s13_verification():
                ("the same J2 model through both force paths", {"bold": True, "color": INK}),
                (" — same mesh, same steps; only the assembly differs", {})]],
              size=14.5, color=BODY)
-    # figure left: field / field / difference strips
+    # figure left: log-scale error ladder
     fw = Inches(7.6)
     fh = Inches(7.6 / fig_aspect("fig_verification.png"))
-    fy = BODY_TOP + Inches(0.5)
+    fy = BODY_TOP + Inches(0.75)
     s.shapes.add_picture(str(FIGS / "fig_verification.png"), MARGIN, fy, fw, fh)
-    add_text(s, MARGIN + Inches(0.1), fy + fh + Inches(0.08), fw, Inches(0.3),
-             "2-D slug impact test problem — internal force field at the final step; impact face at left",
+    add_text(s, MARGIN + Inches(0.1), fy + fh + Inches(0.15), fw, Inches(0.3),
+             "measured on the 2-D slug impact test problem, final step, over every node",
              size=11, color=MUTED, italic=True)
     # stat callouts right
     px = MARGIN + fw + Inches(0.45)
@@ -656,7 +656,7 @@ def s13_verification():
                  lab.split("\n"), size=11.5, color=MUTED, leading=1.05)
         sy += Inches(1.56)
     add_text(s, px, sy + Inches(0.05), pw, Inches(0.8),
-             "the difference panel needs a 10⁸ magnification to show anything at all",
+             "both differences sit at the floating-point noise floor of an explicit step",
              size=11.5, color=MUTED, italic=True, leading=1.1)
     takeaway(s, [("Any error in the interface would appear here — it doesn’t.", {"bold": True, "color": INK}),
                  (" The NEML2 force path matches MOOSE’s native assembly to a few parts in 10", {}),
