@@ -630,19 +630,22 @@ def s13_verification():
                ("the same J2 model through both force paths", {"bold": True, "color": INK}),
                (" — same mesh, same steps; only the assembly implementation differs", {})]],
              size=14.5, color=BODY)
-    # figure left
-    fw = Inches(7.35)
-    fh = Inches(7.35 / fig_aspect("fig_verification.png"))
-    fy = BODY_TOP + Inches(0.55)
+    # figure left: field / field / difference strips
+    fw = Inches(7.7)
+    fh = Inches(7.7 / fig_aspect("fig_verification.png"))
+    fy = BODY_TOP + Inches(0.5)
     s.shapes.add_picture(str(FIGS / "fig_verification.png"), MARGIN, fy, fw, fh)
+    add_text(s, MARGIN + Inches(0.1), fy + fh + Inches(0.08), fw, Inches(0.3),
+             "2-D slug impact test problem — internal force field at the final step; impact face at left",
+             size=11, color=MUTED, italic=True)
     # stat callouts right
     px = MARGIN + fw + Inches(0.45)
     pw = CONTENT_W - fw - Inches(0.45)
     stats = [
-        ([("3.8 × 10", {}), ("−4", {"sup": True})], "max relative difference,\ninternal nodal forces", BLUE),
-        ([("7.8 × 10", {}), ("−8", {"sup": True})], "max relative difference,\ndisplacements", GREEN),
+        ([("≤ 3 × 10", {}), ("−8", {"sup": True})], "difference in nodal forces,\nrelative to the peak force", BLUE),
+        ([("≤ 8 × 10", {}), ("−8", {"sup": True})], "max relative difference\nin displacements", GREEN),
     ]
-    sy = fy + Inches(0.1)
+    sy = fy + Inches(0.15)
     for segs, lab, c in stats:
         add_card(s, px, sy, pw, Inches(1.32), fill=WHITE, line=CARD_LN, line_w=1.0)
         add_rect(s, px, sy + Inches(0.12), Inches(0.055), Inches(1.08), c)
@@ -652,10 +655,12 @@ def s13_verification():
                  lab.split("\n"), size=11.5, color=MUTED, leading=1.05)
         sy += Inches(1.56)
     add_text(s, px, sy + Inches(0.05), pw, Inches(0.8),
-             "node-by-node scatter: every point on the identity line",
+             "the difference panel needs a 10⁸ magnification to show anything at all",
              size=11.5, color=MUTED, italic=True, leading=1.1)
     takeaway(s, [("Any error in the interface would appear here — it doesn't.", {"bold": True, "color": INK}),
-                 (" The NEML2 force path reproduces MOOSE's native assembly to solver precision.", {})])
+                 (" The NEML2 force path reproduces MOOSE's native assembly to one part in 10", {}),
+                 ("8", {"sup": True}),
+                 (".", {})])
 
 
 # ================================================================ 14 RESULTS: TAYLOR IMPACT
@@ -667,35 +672,26 @@ def s14_taylor():
                (" — Johnson–Cook plasticity in NEML2,  Δt = 10 ns,  ", {}),
                ("~12,000 explicit steps", {"bold": True, "color": INK})]],
              size=14.5, color=BODY)
-    # top: plastic-strain sequence
-    pw_ = Inches(9.2)
-    ph_ = Inches(9.2 / fig_aspect("fig_pstrain.png"))
-    py_ = BODY_TOP + Inches(0.5)
-    s.shapes.add_picture(str(FIGS / "fig_pstrain.png"), MARGIN, py_, pw_, ph_)
-    # right of it: what-this-is card
-    cx = MARGIN + pw_ + Inches(0.35)
-    cw = CONTENT_W - pw_ - Inches(0.35)
-    add_card(s, cx, py_ + Inches(0.05), cw, ph_ - Inches(0.1))
-    add_text(s, cx + Inches(0.22), py_ + Inches(0.22), cw - Inches(0.44), Inches(2.4),
-             [[("plastic strain localizes at the impact foot — peak ", {}),
-               ("ε", {"italic": True}), ("p", {"sub": True}),
-               (" ≈ 0.44", {"bold": True, "color": INK})],
-              [("", {})],
-              [("mushrooming develops within the first ", {}),
-               ("10 µs", {"bold": True, "color": INK})]],
-             size=12.5, color=BODY, leading=1.12)
-    # bottom left: profile figure
-    fw2 = Inches(6.0)
-    fh2 = Inches(6.0 / fig_aspect("fig_profile.png"))
-    fy2 = py_ + ph_ + Inches(0.18)
+    # top: plastic-strain cross-section sequence (full width)
+    pw_ = Inches(11.4)
+    ph_ = Inches(11.4 / fig_aspect("fig_pstrain.png"))
+    py_ = BODY_TOP + Inches(0.48)
+    s.shapes.add_picture(str(FIGS / "fig_pstrain.png"), MARGIN + Inches(0.2), py_, pw_, ph_)
+    add_text(s, MARGIN + Inches(0.3), py_ + ph_ + Inches(0.05), Inches(11), Inches(0.28),
+             "meridional cross-sections (azimuthally projected) — plastic strain localizes at the impact foot",
+             size=11, color=MUTED, italic=True)
+    # bottom left: mirrored temper profile
+    fw2 = Inches(5.9)
+    fh2 = Inches(5.9 / fig_aspect("fig_profile.png"))
+    fy2 = py_ + ph_ + Inches(0.34)
     s.shapes.add_picture(str(FIGS / "fig_profile.png"), MARGIN, fy2, fw2, fh2)
     # bottom right: temper story
-    bx = MARGIN + fw2 + Inches(0.45)
-    bw = CONTENT_W - fw2 - Inches(0.45)
-    add_bullets(s, bx, fy2 + Inches(0.28), bw, fh2 - Inches(0.2), [
-        [("Same everything — mesh, BCs, integrator. Copper temper swapped by ", {}),
+    bx = MARGIN + fw2 + Inches(0.5)
+    bw = CONTENT_W - fw2 - Inches(0.5)
+    add_bullets(s, bx, fy2 + Inches(0.3), bw, fh2 - Inches(0.2), [
+        [("Same mesh, BCs, integrator — the copper temper is swapped by ", {}),
          ("changing only NEML2 material parameters", {"bold": True})],
-        [("Final profiles: full-hard ", {}),
+        [("Full-hard ", {}),
          ("51%", {"bold": True, "color": RED}),
          (" vs annealed ", {}),
          ("58%", {"bold": True, "color": BLUE}),

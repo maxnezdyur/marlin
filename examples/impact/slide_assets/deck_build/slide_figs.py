@@ -1,9 +1,12 @@
 #!/usr/bin/env python
-"""Regenerate the results figures in the deck's INL style (Arial, brand palette,
-no in-figure suptitles — the slide carries the title). Reads the same exodus
-outputs as verif_2d.py / demo_mushroom.py.
+"""Results figures for the WCCM deck — redesigned to show the physics directly.
 
-Outputs (deck_build/figs/): fig_verification.png, fig_pstrain.png, fig_profile.png
+fig_verification : the two computed force FIELDS side by side + difference strip
+fig_pstrain_xsec : meridional cross-sections colored by effective plastic strain
+fig_thermal_xsec : same cross-section design colored by temperature rise
+fig_profile      : mirrored-half temper comparison (full-hard top / annealed bottom)
+
+All read exodus outputs directly (scipy netcdf). INL deck style throughout.
 """
 
 import os
@@ -15,17 +18,15 @@ from scipy.io import netcdf_file
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+import matplotlib.tri as mtri
 from matplotlib import colors
-from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-IMP = os.path.normpath(os.path.join(HERE, ".."))          # examples/impact/slide_assets
-IMPACT = os.path.normpath(os.path.join(HERE, "../.."))    # examples/impact
+IMPACT = os.path.normpath(os.path.join(HERE, "../.."))
 TESTS = os.path.normpath(os.path.join(HERE, "../../../../test/tests/impact"))
 OUT = os.path.join(HERE, "figs")
 os.makedirs(OUT, exist_ok=True)
 
-# INL deck palette
 BLUE = "#06509D"
 CRIMSON = "#CF1D4C"
 GRAY = "#59595C"
@@ -45,135 +46,179 @@ plt.rcParams.update({
 })
 
 
-def _grid(ax):
-    ax.grid(alpha=0.35, linewidth=0.6, color=FAINT)
-    ax.set_axisbelow(True)
-    for side in ("top", "right"):
-        ax.spines[side].set_visible(False)
+def _nc(path):
+    return netcdf_file(path, "r", mmap=False)
 
 
-# ---------------------------------------------------------------- verification
-def load_2d(fn):
-    nc = netcdf_file(fn, "r", mmap=False)
-    g = lambda n: nc.variables[n].data.copy()
-    d = dict(x=g("coordx"), y=g("coordy"), dx=g("vals_nod_var1"), dy=g("vals_nod_var2"),
-             fx=g("vals_nod_var3"), fy=g("vals_nod_var4"))
-    nc.close()
-    return d
+def _names(nc, key):
+    return [b"".join(n).decode("ascii", "ignore").strip("\x00 ") for n in nc.variables[key].data]
 
 
-def rel_err(a, b, floor=1e-5):
-    a, b = a[-1], b[-1]
-    denom = np.maximum(np.maximum(np.abs(a), np.abs(b)), floor)
-    return np.abs(a - b) / denom
-
-
+# ================================================================ verification
 def fig_verification():
-    M = load_2d(os.path.join(TESTS, "gold/slug_2d.e"))
-    E = load_2d(os.path.join(TESTS, "slug_2d.e"))
-    max_f = max(rel_err(M["fx"], E["fx"]).max(), rel_err(M["fy"], E["fy"]).max())
-    max_d = max(rel_err(M["dx"], E["dx"]).max(), rel_err(M["dy"], E["dy"]).max())
+    """Three horizontal strips: MOOSE force field, NEML2 force field, difference.
+    2D slug drawn deformed, axial horizontal, impact face at left."""
 
-    fig, axes = plt.subplots(1, 2, figsize=(8.6, 3.9))
-    panels = [("fy", "internal nodal force$_y$ (MN)", 1e-6, axes[0]),
-              ("dy", "displacement$_y$ (mm)", 1e3, axes[1])]
-    for key, lab, scale, ax in panels:
-        m, e = M[key][-1] * scale, E[key][-1] * scale
-        lim = [min(m.min(), e.min()), max(m.max(), e.max())]
-        pad = 0.06 * (lim[1] - lim[0])
-        lim = [lim[0] - pad, lim[1] + pad]
-        ax.plot(lim, lim, "--", color=GRAY, lw=1.1, zorder=1)
-        ax.annotate("y = x", xy=(0.62, 0.56), xycoords="axes fraction",
-                    color=GRAY, fontsize=11, rotation=38)
-        ax.scatter(m, e, s=26, color=BLUE, alpha=0.75, edgecolors="white",
-                   linewidths=0.5, zorder=2)
-        ax.set_xlim(lim); ax.set_ylim(lim)
-        ax.set_xlabel(f"MOOSE native J2 — {lab}")
-        ax.set_ylabel(f"NEML2 force path — {lab}")
+    def load(fn):
+        nc = _nc(fn)
+        g = lambda n: nc.variables[n].data.copy()
+        d = dict(x=g("coordx"), y=g("coordy"), conn=g("connect1").astype(int) - 1,
+                 dx=g("vals_nod_var1")[-1], dy=g("vals_nod_var2")[-1],
+                 fx=g("vals_nod_var3")[-1], fy=g("vals_nod_var4")[-1])
+        nc.close()
+        return d
+
+    M = load(os.path.join(TESTS, "gold/slug_2d.e"))
+    E = load(os.path.join(TESTS, "slug_2d.e"))
+
+    # deformed coords, axial (y) horizontal, in mm; force in kN
+    ax_c = (M["y"] + M["dy"]) * 1e3
+    r_c = (M["x"] + M["dx"]) * 1e3
+    tris = []
+    for q in M["conn"]:
+        tris.append([q[0], q[1], q[2]])
+        tris.append([q[0], q[2], q[3]])
+    tri = mtri.Triangulation(ax_c, r_c, np.array(tris))
+
+    fM, fE = M["fy"] * 1e-3, E["fy"] * 1e-3
+    # normalize the error by the largest force in the field: a fair, floor-free scale
+    diff = np.abs(fM - fE) / np.abs(fM).max()
+    vmax = max(abs(fM).max(), abs(fE).max())
+
+    fig, axes = plt.subplots(3, 1, figsize=(9.0, 3.9), sharex=True, sharey=True)
+    panels = [
+        (fM, "MOOSE native J2 — internal nodal force (kN)", "Blues_r", (-vmax, 0)),
+        (fE, "NEML2 force path — same field", "Blues_r", (-vmax, 0)),
+        (diff * 1e8, r"$|\Delta F|\ /\ \max|F|\ \ (\times 10^{-8})$", "Reds", (0, 3)),
+    ]
+    pcs = []
+    for ax, (vals, title, cmap, (v0, v1)) in zip(axes, panels):
+        pc = ax.tripcolor(tri, vals, shading="gouraud", cmap=cmap, vmin=v0, vmax=v1)
+        pcs.append(pc)
         ax.set_aspect("equal")
-        _grid(ax)
-    axes[0].set_title("nodal forces", fontsize=13, pad=8)
-    axes[1].set_title("displacements", fontsize=13, pad=8)
-    fig.tight_layout()
+        ax.set_axis_off()
+        ax.set_title(title, fontsize=12, loc="left", pad=2)
+    # one shared colorbar for the two identical field panels, one for the diff
+    cb1 = fig.colorbar(pcs[0], ax=axes[:2], fraction=0.03, pad=0.015, aspect=14)
+    cb1.ax.tick_params(labelsize=9, color=GRAY, labelcolor=GRAY)
+    cb1.outline.set_edgecolor(FAINT)
+    cb2 = fig.colorbar(pcs[2], ax=axes[2:], fraction=0.06, pad=0.015, aspect=6)
+    cb2.ax.tick_params(labelsize=9, color=GRAY, labelcolor=GRAY)
+    cb2.outline.set_edgecolor(FAINT)
+    axes[0].annotate("impact face", xy=(ax_c.min() + 0.4, r_c.max() * 1.45),
+                     fontsize=10, color=GRAY, ha="left")
     out = os.path.join(OUT, "fig_verification.png")
-    fig.savefig(out, dpi=220, bbox_inches="tight", pad_inches=0.18, facecolor="white")
-    print("wrote", out, f"| max rel force diff {max_f:.2e}, disp {max_d:.2e}")
+    fig.savefig(out, dpi=220, bbox_inches="tight", pad_inches=0.12, facecolor="white")
+    print("wrote", out, f"| max |dF|/max|F| {diff.max():.2e}")
     plt.close(fig)
 
 
-# ---------------------------------------------------------------- 3D mushroom
-FACES = [[0, 1, 2, 3], [4, 5, 6, 7], [0, 1, 5, 4], [1, 2, 6, 5], [2, 3, 7, 6], [3, 0, 4, 7]]
-
-
-def load_3d(fn, elem_field=None):
-    nc = netcdf_file(os.path.join(IMPACT, fn), "r", mmap=False)
+# ================================================================ cross-sections
+def _load_3d(path, fields):
+    nc = _nc(path)
     g = lambda n: nc.variables[n].data.copy()
+    names = _names(nc, "name_elem_var")
     d = dict(x=g("coordx"), y=g("coordy"), z=g("coordz"), t=g("time_whole"),
              dx=g("vals_nod_var1"), dy=g("vals_nod_var2"), dz=g("vals_nod_var3"),
              conn=g("connect1").astype(int) - 1)
-    d["ef"] = g(elem_field) if elem_field else None
+    for f in fields:
+        d[f] = g(f"vals_elem_var{names.index(f) + 1}eb1")
     nc.close()
     return d
 
 
-def exterior(conn):
-    cnt = defaultdict(int)
-    owner = {}
-    for e, el in enumerate(conn):
-        for f in FACES:
-            nodes = tuple(el[f])
-            k = tuple(sorted(nodes))
-            cnt[k] += 1
-            owner[k] = (nodes, e)
-    return [owner[k] for k, c in cnt.items() if c == 1]
-
-
-def warped(d, k):
-    return np.stack([d["x"] + d["dx"][k], d["y"] + d["dy"][k], d["z"] + d["dz"][k]], axis=1)
-
-
-def fig_pstrain():
-    d = load_3d("j2_rateindep_out.e", "vals_elem_var1eb1")
-    ext = exterior(d["conn"])
-    frames = [3, 9, 15, 20]
-    vmax = max(d["ef"][k].max() for k in frames)
+def _xsec_panels(d, field, frames, cmap, cbar_label, out_name, fmt="{:.2f}",
+                 vmax=None, accent=CRIMSON):
+    """Meridional (axial-radial) cross-section sequence, azimuthally projected:
+    element centroids at deformed positions, mirrored to ±r, tricontourf."""
+    conn = d["conn"]
+    peak = max(d[field][k].max() for k in frames)
+    vmax = vmax or 0.8 * peak  # saturate the top 20% (extend='max') for readable mid-tones
     norm = colors.Normalize(0.0, vmax)
-    cmap = matplotlib.colormaps["inferno"]
-    fig = plt.figure(figsize=(13.2, 3.4))
-    for i, k in enumerate(frames):
-        ax = fig.add_subplot(1, len(frames), i + 1, projection="3d")
-        P = warped(d, k)
-        polys = [P[list(n)] for n, e in ext]
-        fc = cmap(norm(np.array([d["ef"][k][e] for n, e in ext])))
-        ax.add_collection3d(Poly3DCollection(polys, facecolors=fc,
-                                             edgecolors=(0, 0, 0, 0.12), linewidths=0.2))
-        mins, maxs = P.min(0), P.max(0)
-        L = maxs - mins
-        ax.set_xlim(mins[0], maxs[0]); ax.set_ylim(mins[1], maxs[1]); ax.set_zlim(mins[2], maxs[2])
-        ax.set_box_aspect(tuple(L))
-        ax.view_init(elev=10, azim=-80)
+    n = len(frames)
+    fig, axes = plt.subplots(1, n, figsize=(3.05 * n, 2.15), sharey=True)
+    for ax, k in zip(axes, frames):
+        X = d["x"] + d["dx"][k]
+        Y = d["y"] + d["dy"][k]
+        Z = d["z"] + d["dz"][k]
+        cx = X[conn].mean(1)
+        cy = Y[conn].mean(1)
+        cz = Z[conn].mean(1)
+        axial = (cy - (d["y"] + d["dy"][k]).min()) * 1e3
+        r = np.sqrt(cx ** 2 + cz ** 2) * 1e3
+        vals = d[field][k]
+        # mirror to a full section + pin the axis so contours close nicely
+        A = np.r_[axial, axial]
+        R = np.r_[r, -r]
+        V = np.r_[vals, vals]
+        levels = np.linspace(0, vmax, 17)
+        tpc = ax.tricontourf(A, R, V, levels=levels, cmap=cmap, extend="max")
+        for c in (tpc.collections if hasattr(tpc, "collections") else []):
+            c.set_edgecolor("face")
+        ax.set_aspect("equal")
+        ax.set_xlim(-1.5, 40)
+        ax.set_ylim(-8.6, 8.6)
         ax.set_axis_off()
-        ax.set_title(f"t = {d['t'][k]*1e6:.1f} µs", fontsize=13, color=INK, pad=0)
+        ax.set_title(f"t = {d['t'][k]*1e6:.0f} µs", fontsize=13, pad=2)
+        # peak annotation on the last frame
+        if k == frames[-1]:
+            ax.annotate(f"peak {fmt.format(vals.max())}",
+                        xy=(20, -7.4), fontsize=12, color=accent, fontweight="bold")
+    # scale bar on the first panel
+    axes[0].plot([26, 36], [-7.0, -7.0], "-", color=GRAY, lw=1.6)
+    axes[0].annotate("10 mm", xy=(31, -5.9), ha="center", fontsize=9.5, color=GRAY)
     sm = plt.cm.ScalarMappable(norm=norm, cmap=cmap)
     sm.set_array([])
-    cb = fig.colorbar(sm, ax=fig.axes, fraction=0.014, pad=0.01)
-    cb.set_label("effective plastic strain", fontsize=11, color=INK)
-    cb.ax.tick_params(labelsize=10, color=GRAY, labelcolor=GRAY)
+    cb = fig.colorbar(sm, ax=axes, fraction=0.015, pad=0.012, extend="max")
+    cb.set_label(cbar_label, fontsize=11)
+    cb.ax.tick_params(labelsize=9.5, color=GRAY, labelcolor=GRAY)
     cb.outline.set_edgecolor(FAINT)
-    out = os.path.join(OUT, "fig_pstrain.png")
-    fig.savefig(out, dpi=220, bbox_inches="tight", facecolor="white")
-    print("wrote", out, f"| pstrain max {vmax:.3f}, t range {d['t'][0]*1e6:.2f}-{d['t'][-1]*1e6:.1f} µs, steps {len(d['t'])}")
+    out = os.path.join(OUT, out_name)
+    fig.savefig(out, dpi=220, bbox_inches="tight", pad_inches=0.12, facecolor="white")
+    print("wrote", out, f"| {field} peak {max(d[field][k].max() for k in frames):.3f}")
     plt.close(fig)
 
 
-def surf_nodes(conn):
+def _pick_frames(d):
+    """4 frames: early, developing, mid, final."""
+    nlast = len(d["t"]) - 1
+    return [max(1, int(nlast * f)) for f in (0.05, 0.15, 0.4, 1.0)]
+
+
+def fig_pstrain_xsec(src="3d_slug_thermal_out.e"):
+    d = _load_3d(os.path.join(IMPACT, src), ["state/ep"])
+    _xsec_panels(d, "state/ep", _pick_frames(d), "Blues",
+                 "effective plastic strain", "fig_pstrain.png", fmt="{:.2f}")
+    return d
+
+
+def fig_thermal_xsec(src="3d_slug_thermal_out.e"):
+    d = _load_3d(os.path.join(IMPACT, src), ["state/dT"])
+    _xsec_panels(d, "state/dT", _pick_frames(d), "OrRd",
+                 "temperature rise ΔT (K)", "fig_thermal.png", fmt="{:.0f} K")
+    return d
+
+
+# ================================================================ profile
+FACES = [[0, 1, 2, 3], [4, 5, 6, 7], [0, 1, 5, 4], [1, 2, 6, 5], [2, 3, 7, 6], [3, 0, 4, 7]]
+
+
+def _exterior_nodes(conn):
+    cnt = defaultdict(int)
+    facemap = {}
+    for e, el in enumerate(conn):
+        for f in FACES:
+            k = tuple(sorted(el[f]))
+            cnt[k] += 1
+            facemap[k] = el[f]
     s = set()
-    for n, e in exterior(conn):
-        s.update(n)
+    for k, c in cnt.items():
+        if c == 1:
+            s.update(k)
     return np.array(sorted(s))
 
 
-def silhouette(dd, k, snodes, nb=22):
+def _silhouette(dd, k, snodes, nb=26):
     Y = (dd["y"] + dd["dy"][k])[snodes]
     R = np.sqrt((dd["x"] + dd["dx"][k]) ** 2 + (dd["z"] + dd["dz"][k]) ** 2)[snodes]
     Y = Y - Y.min()
@@ -191,45 +236,69 @@ def silhouette(dd, k, snodes, nb=22):
     return yc * 1e3, rs * 1e3
 
 
+def _load_disp(path):
+    nc = _nc(path)
+    g = lambda n: nc.variables[n].data.copy()
+    d = dict(x=g("coordx"), y=g("coordy"), z=g("coordz"), t=g("time_whole"),
+             dx=g("vals_nod_var1"), dy=g("vals_nod_var2"), dz=g("vals_nod_var3"),
+             conn=g("connect1").astype(int) - 1)
+    nc.close()
+    return d
+
+
 def fig_profile():
-    fh = load_3d("3d_slug_mesh_fullhard.e")
-    an = load_3d("3d_slug_mesh_annealed_exodus.e")
-    sn = surf_nodes(fh["conn"])
+    """Mirrored halves: full-hard silhouette on top, annealed below the axis."""
+    fh = _load_disp(os.path.join(IMPACT, "3d_slug_mesh_fullhard.e"))
+    an = _load_disp(os.path.join(IMPACT, "3d_slug_mesh_annealed_exodus.e"))
+    sn = _exterior_nodes(fh["conn"])
     R0 = np.sqrt(fh["x"] ** 2 + fh["z"] ** 2).max() * 1e3
     L0 = (fh["y"].max() - fh["y"].min()) * 1e3
     kfh, kan = fh["dy"].shape[0] - 1, an["dy"].shape[0] - 1
-    yfh, rfh = silhouette(fh, kfh, sn)
-    yan, ran = silhouette(an, kan, sn)
+    yfh, rfh = _silhouette(fh, kfh, sn)
+    yan, ran = _silhouette(an, kan, sn)
     sh_fh = abs(fh["dy"][kfh].min()) / (fh["y"].max() - fh["y"].min()) * 100
     sh_an = abs(an["dy"][kan].min()) / (an["y"].max() - an["y"].min()) * 100
 
-    fig, ax = plt.subplots(figsize=(7.6, 3.3))
-    ax.add_patch(plt.Rectangle((0, -R0), L0, 2 * R0, fill=False, ls="--",
-                               ec=GRAY, lw=1.3))
-    ax.annotate("undeformed", xy=(L0 - 1, R0 + 0.4), ha="right", color=GRAY, fontsize=11)
-    ax.fill_between(yfh, -rfh, rfh, color=CRIMSON, alpha=0.14, linewidth=0)
-    ax.plot(yfh, rfh, "-", color=CRIMSON, lw=2.2)
-    ax.plot(yfh, -rfh, "-", color=CRIMSON, lw=2.2)
-    ax.plot(yan, ran, "-", color=BLUE, lw=2.2)
-    ax.plot(yan, -ran, "-", color=BLUE, lw=2.2)
-    # direct labels instead of a legend box
-    ax.annotate(f"full-hard — {sh_fh:.0f}% shorter", xy=(yfh[-1] + 0.8, 2.4),
-                color=CRIMSON, fontsize=12, fontweight="bold")
-    ax.annotate(f"annealed — {sh_an:.0f}% shorter", xy=(yfh[-1] + 0.8, 0.9),
-                color=BLUE, fontsize=12, fontweight="bold")
+    fig, ax = plt.subplots(figsize=(7.8, 3.1))
+    # undeformed outline
+    ax.add_patch(plt.Rectangle((0, -R0), L0, 2 * R0, fill=False, ls="--", ec=GRAY, lw=1.3))
+    ax.annotate("undeformed", xy=(L0 - 0.8, R0 * 0.45), ha="right",
+                color=GRAY, fontsize=11)
+    # top half: full-hard; bottom half: annealed
+    ax.fill_between(yfh, 0, rfh, color=CRIMSON, alpha=0.16, linewidth=0)
+    ax.plot(yfh, rfh, "-", color=CRIMSON, lw=2.4)
+    ax.fill_between(yan, -ran, 0, color=BLUE, alpha=0.16, linewidth=0)
+    ax.plot(yan, -ran, "-", color=BLUE, lw=2.4)
+    ax.axhline(0.0, color=GRAY, lw=0.8, ls=":")
+    ax.annotate("one temper shown on each side of the axis",
+                xy=(L0 * 0.55, -1.35), fontsize=9.5, color=GRAY, style="italic")
+    ax.annotate(f"full-hard   {sh_fh:.0f}% shorter", xy=(yfh.max() + 1.5, 4.4),
+                color=CRIMSON, fontsize=12.5, fontweight="bold")
+    ax.annotate(f"annealed   {sh_an:.0f}% shorter", xy=(yan.max() + 1.5, -5.3),
+                color=BLUE, fontsize=12.5, fontweight="bold")
     ax.set_xlabel("axial position from impact face (mm)")
     ax.set_ylabel("radius (mm)")
+    ax.set_ylim(-7.0, 7.0)
     ax.set_aspect("equal")
-    _grid(ax)
+    ax.grid(alpha=0.3, linewidth=0.6, color=FAINT)
+    ax.set_axisbelow(True)
+    for side in ("top", "right"):
+        ax.spines[side].set_visible(False)
     fig.tight_layout()
     out = os.path.join(OUT, "fig_profile.png")
-    fig.savefig(out, dpi=220, bbox_inches="tight", facecolor="white")
-    print("wrote", out, f"| shortening fullhard {sh_fh:.1f}% annealed {sh_an:.1f}%, "
-          f"t_end fh {fh['t'][kfh]*1e6:.0f} µs, steps {len(fh['t'])}")
+    fig.savefig(out, dpi=220, bbox_inches="tight", pad_inches=0.12, facecolor="white")
+    print("wrote", out, f"| shortening fh {sh_fh:.1f}% an {sh_an:.1f}%")
     plt.close(fig)
 
 
 if __name__ == "__main__":
-    fig_verification()
-    fig_pstrain()
-    fig_profile()
+    import sys
+    which = sys.argv[1] if len(sys.argv) > 1 else "all"
+    if which in ("all", "verif"):
+        fig_verification()
+    if which in ("all", "pstrain"):
+        fig_pstrain_xsec()
+    if which in ("all", "thermal"):
+        fig_thermal_xsec()
+    if which in ("all", "profile"):
+        fig_profile()

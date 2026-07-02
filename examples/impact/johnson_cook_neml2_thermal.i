@@ -1,0 +1,166 @@
+# Johnson-Cook rate- AND temperature-dependent plasticity for NEML2 -- ADIABATIC variant.
+#
+# DRAFT scaffold (Claude) for the coupled thermomechanical slug. It adds an
+# adiabatic temperature state to the existing isothermal johnson_cook_neml2.i:
+#
+#   dT/dt = beta/(rho*c_p) * sigma_vm * ep_dot          (Taylor-Quinney heating)
+#   sigma_y = [A + B*ep^n] * (1 - T*^m),  T* = (T-T_ref)/(T_melt-T_ref)
+#
+# Conduction is omitted on purpose: over the ~120 us run the thermal diffusion
+# length sqrt(alpha*t) ~ 0.11 mm << element size (~2 mm), so the slug is adiabatic.
+# => NO heat-conduction PDE, NO HEAT_TRANSFER module, NO MOOSE thermal kernels.
+#
+# Temperature is LAGGED one explicit step (jc_flowrate reads old_state/T) so the
+# radial-return system stays 1-unknown (state/ep) and acyclic. At dt=1e-8 s the
+# lag error is negligible.
+#
+# SEEDING SOLVED by reformulating in temperature RISE: state/dT = T - 300 K.
+# NEML2 zero-inits state, and dT=0 is exactly correct at t=0. Johnson-Cook is
+# reparameterized to consume the rise directly:
+#   T* = (T - 300)/(1338 - 300) == dT/1038  ->  reference_temperature=0,
+#   melting_temperature=1038, temperature = state/dT~1.
+# Absolute temperature for plots = 300 K + dT.
+
+[Solvers]
+  [newton]
+    type = NewtonWithLineSearch
+    abs_tol = 1e-8
+    rel_tol = 1e-9
+    max_its = 50
+    linear_solver = 'lu'
+  []
+  [lu]
+    type = DenseLU
+  []
+[]
+
+[Models]
+  [trial_elastic_strain]
+    type = SR2LinearCombination
+    to = 'state/Ee'
+    from = 'neml2_strain state/Ep~1'
+    weights = '1 -1'
+  []
+  [cauchy_stress]
+    type = LinearIsotropicElasticity
+    coefficient_types = 'YOUNGS_MODULUS POISSONS_RATIO'
+    coefficients = '117e9 0.34' # OFHC copper
+    strain = 'state/Ee'
+    stress = 'state/S'
+  []
+  [flow_direction]
+    type = AssociativeJ2FlowDirection
+    mandel_stress = 'state/S'
+    flow_direction = 'forces/N'
+  []
+  [trial_state]
+    type = ComposedModel
+    models = 'trial_elastic_strain cauchy_stress flow_direction'
+  []
+
+  [ep_rate]
+    type = ScalarVariableRate
+    variable = 'state/ep'
+  []
+  [plastic_strain_rate]
+    type = AssociativePlasticFlow
+    flow_direction = 'forces/N'
+    flow_rate = 'state/ep_rate'
+    plastic_strain_rate = 'state/Ep_rate'
+  []
+  [plastic_strain]
+    type = SR2ForwardEulerTimeIntegration
+    variable = 'state/Ep'
+  []
+  [plastic_update]
+    type = ComposedModel
+    models = 'ep_rate plastic_strain_rate plastic_strain'
+  []
+  [elastic_strain]
+    type = SR2LinearCombination
+    to = 'state/Ee'
+    from = 'neml2_strain state/Ep'
+    weights = '1 -1'
+  []
+  [stress_update]
+    type = ComposedModel
+    models = 'elastic_strain cauchy_stress'
+  []
+
+  [vonmises]
+    type = SR2Invariant
+    invariant_type = 'VONMISES'
+    tensor = 'state/S'
+    invariant = 'state/s'
+  []
+  [jc_flowrate]
+    type = JohnsonCookFlowRate
+    vonmises_stress = 'state/s'
+    equivalent_plastic_strain = 'state/ep'
+    # ----- THERMO ON: read the lagged temperature -----
+    use_temperature = true
+    temperature = 'state/dT~1'  # lagged one step (NEML2 history notation)
+    # --------------------------------------------------
+    flow_rate = 'state/ep_rate'
+    A = 99.7e6
+    B = 262.8e6
+    n = 0.23
+    C = 0.029
+    m = 0.98
+    reference_strain_rate = 1.0
+    reference_temperature = 0    # dT formulation: T* = dT/1038 == (T-300)/(1338-300)
+    melting_temperature = 1038   # dT formulation (see reference_temperature)
+    initial_plastic_strain = 0.37 # CuH04 full-hard; 0 for annealed
+  []
+  [integrate_ep]
+    type = ScalarBackwardEulerTimeIntegration
+    variable = 'state/ep'
+  []
+
+  # ===================== NEW: adiabatic plastic heating =====================
+  # T_rate = beta/(rho*c_p) * sigma_vm * ep_dot
+  #   beta = 0.9 (Taylor-Quinney), rho = 8960 kg/m^3, c_p = 385 J/(kg.K)  [OFHC Cu]
+  #   scaling = 0.9 / (8960 * 385) = 2.6090e-7  K.m^3/J
+  [plastic_heating]
+    type = ScalarMultiplication
+    from = 'state/s state/ep_rate'
+    to = 'state/dT_rate'
+    scaling = 2.6090e-7
+  []
+  [integrate_T]
+    type = ScalarForwardEulerTimeIntegration
+    variable = 'state/dT' # auto-uses state/dT_rate and state/dT~1
+  []
+  # ==========================================================================
+
+  [rate]
+    type = ComposedModel
+    models = "plastic_update stress_update vonmises jc_flowrate integrate_ep"
+  []
+  [predictor]
+    type = ConstantExtrapolationPredictor
+    unknowns_Scalar = 'state/ep'
+  []
+  [radial_return]
+    type = ImplicitUpdate
+    equation_system = 'return_map_sys'
+    solver = 'newton'
+    predictor = 'predictor'
+  []
+
+  [model]
+    type = ComposedModel
+    # plastic_heating + integrate_T run AFTER the return map (post-solve),
+    # consuming the converged state/s and state/ep_rate.
+    models = 'trial_state radial_return ep_rate plastic_update stress_update vonmises plastic_heating integrate_T'
+    additional_outputs = 'state/s state/ep state/S state/Ep state/dT'
+  []
+[]
+
+[EquationSystems]
+  [return_map_sys]
+    type = NonlinearSystem
+    model = 'rate'
+    unknowns = 'state/ep'
+  []
+[]
