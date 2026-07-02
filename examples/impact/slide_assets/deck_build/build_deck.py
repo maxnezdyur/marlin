@@ -631,33 +631,37 @@ def s13_verification():
                ("the same J2 model through both force paths", {"bold": True, "color": INK}),
                (" — same mesh, same steps; only the assembly differs", {})]],
              size=14.5, color=BODY)
-    # figure left: log-scale error ladder
-    fw = Inches(7.6)
-    fh = Inches(7.6 / fig_aspect("fig_verification.png"))
-    fy = BODY_TOP + Inches(0.75)
-    s.shapes.add_picture(str(FIGS / "fig_verification.png"), MARGIN, fy, fw, fh)
-    add_text(s, MARGIN + Inches(0.1), fy + fh + Inches(0.15), fw, Inches(0.3),
-             "measured on the 2-D slug impact test problem, final step, over every node",
-             size=11, color=MUTED, italic=True)
-    # stat callouts right
-    px = MARGIN + fw + Inches(0.45)
-    pw = CONTENT_W - fw - Inches(0.45)
+    # words and numbers only — two giant stats, then the context line
+    col_gap = Inches(0.5)
+    cw = (CONTENT_W - col_gap) / 2
+    sy = BODY_TOP + Inches(0.75)
+    sh_ = Inches(2.15)
     stats = [
-        ([("≤ 3 × 10", {}), ("−8", {"sup": True})], "difference in nodal forces,\nrelative to the peak force", BLUE),
-        ([("≤ 8 × 10", {}), ("−8", {"sup": True})], "max relative difference\nin displacements", GREEN),
+        ([("≤ 3 × 10", {}), ("−8", {"sup": True, "size": 34})],
+         "maximum difference in nodal forces", "relative to the peak force", BLUE),
+        ([("≤ 8 × 10", {}), ("−8", {"sup": True, "size": 34})],
+         "maximum relative difference", "in nodal displacements", GREEN),
     ]
-    sy = fy + Inches(0.15)
-    for segs, lab, c in stats:
-        add_card(s, px, sy, pw, Inches(1.32), fill=WHITE, line=CARD_LN, line_w=1.0)
-        add_rect(s, px, sy + Inches(0.12), Inches(0.055), Inches(1.08), c)
-        add_text(s, px + Inches(0.28), sy + Inches(0.14), pw - Inches(0.5), Inches(0.55),
-                 [[(t, {**ov, "bold": True, "color": c}) for t, ov in segs]], size=30)
-        add_text(s, px + Inches(0.28), sy + Inches(0.74), pw - Inches(0.5), Inches(0.52),
-                 lab.split("\n"), size=11.5, color=MUTED, leading=1.05)
-        sy += Inches(1.56)
-    add_text(s, px, sy + Inches(0.05), pw, Inches(0.8),
-             "both differences sit at the floating-point noise floor of an explicit step",
-             size=11.5, color=MUTED, italic=True, leading=1.1)
+    for i, (segs, lab1, lab2, c) in enumerate(stats):
+        cx = MARGIN + i * (cw + col_gap)
+        add_card(s, cx, sy, cw, sh_, fill=WHITE, line=CARD_LN, line_w=1.0)
+        add_rect(s, cx, sy + Inches(0.18), Inches(0.07), sh_ - Inches(0.36), c)
+        add_text(s, cx + Inches(0.45), sy + Inches(0.3), cw - Inches(0.7), Inches(1.05),
+                 [[(t, {**ov, "bold": True, "color": c}) for t, ov in segs]], size=54)
+        add_text(s, cx + Inches(0.47), sy + Inches(1.42), cw - Inches(0.75), Inches(0.6),
+                 [lab1, lab2], size=14.5, color=BODY, leading=1.15)
+    # context line
+    ly = sy + sh_ + Inches(0.5)
+    add_text(s, MARGIN, ly, CONTENT_W, Inches(0.4),
+             [[("That is ", {}),
+               ("6,000× tighter", {"bold": True, "color": INK}),
+               (" than the exodiff regression tolerance of 5 × 10", {}),
+               ("−4", {"sup": True, "size": 12}),
+               (" — floating-point noise territory.", {})]],
+             size=16.5, color=BODY, align=PP_ALIGN.CENTER)
+    add_text(s, MARGIN, ly + Inches(0.52), CONTENT_W, Inches(0.3),
+             "measured node-by-node on the 2-D slug impact test problem, final step",
+             size=11.5, color=MUTED, italic=True, align=PP_ALIGN.CENTER)
     takeaway(s, [("Any error in the interface would appear here — it doesn’t.", {"bold": True, "color": INK}),
                  (" The NEML2 force path matches MOOSE’s native assembly to a few parts in 10", {}),
                  ("8", {"sup": True}),
