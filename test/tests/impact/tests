@@ -28,4 +28,58 @@
     recover = false
     restep = false
   []
+
+  [rz_thermal]
+    type = Exodiff
+    input = rz_thermal_neml2.i
+    exodiff = rz_thermal_out.e
+    abs_zero = 1e-7
+    requirement = 'The system shall run a coupled thermo-mechanical Johnson-Cook axisymmetric slug impact through the NEML2 nodal-force path, with the temperature rise integrated inside the NEML2 model.'
+    compute_devices = 'cpu'
+    capabilities = 'method=opt & neml2'
+    max_parallel = 1
+    max_threads = 1
+    recover = false
+    restep = false
+  []
+  [rz_thermal_beta0]
+    type = Exodiff
+    input = rz_thermal_beta0.i
+    exodiff = rz_beta0_equiv.e
+    abs_zero = 1e-15
+    requirement = 'The coupled thermo-mechanical NEML2 model with the Taylor-Quinney factor set to zero shall reproduce the isothermal model exactly.'
+    compute_devices = 'cpu'
+    capabilities = 'method=opt & neml2'
+    max_parallel = 1
+    max_threads = 1
+    recover = false
+    restep = false
+  []
+  [rz_isothermal_equivalence]
+    type = Exodiff
+    input = rz_isothermal.i
+    exodiff = rz_beta0_equiv.e
+    abs_zero = 1e-15
+    prereq = rz_thermal_beta0
+    requirement = 'The isothermal NEML2 model shall produce results identical to the beta = 0 coupled model through the same axisymmetric nodal-force path.'
+    compute_devices = 'cpu'
+    capabilities = 'method=opt & neml2'
+    max_parallel = 1
+    max_threads = 1
+    recover = false
+    restep = false
+  []
+  [rz_thermal_identity]
+    type = CSVDiff
+    input = rz_thermal_identity.i
+    csvdiff = rz_thermal_identity_out.csv
+    abs_zero = 1e-12
+    requirement = 'The temperature-rise update inside the coupled NEML2 model shall satisfy the forward-Euler heating identity dT_n - dT_n-1 = scaling * s_n * (ep_n - ep_n-1) to machine precision.'
+    compute_devices = 'cpu'
+    capabilities = 'method=opt & neml2'
+    max_parallel = 1
+    max_threads = 1
+    recover = false
+    restep = false
+  []
 []
