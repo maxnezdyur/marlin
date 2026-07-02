@@ -38,7 +38,7 @@ CONTENT_W = PAGE_W - 2 * MARGIN
 MONO = "Consolas"
 
 
-def takeaway(s, text_segs, y=Inches(5.9), fill=GOLD_T, line=GOLD):
+def takeaway(s, text_segs, y=Inches(5.76), fill=GOLD_T, line=GOLD):
     add_card(s, MARGIN, y, CONTENT_W, Inches(0.72), fill=fill, line=line, line_w=1.0)
     add_text(s, MARGIN + Inches(0.3), y, CONTENT_W - Inches(0.6), Inches(0.72),
              [text_segs], size=15, color=BODY, anchor=MSO_ANCHOR.MIDDLE)
@@ -67,6 +67,7 @@ def s01_title():
             r.font.bold = False
             r.font.color.rgb = SKY
         elif idx == 16:  # top-left presenter block
+            ph.width = Inches(4.2)
             tf = ph.text_frame
             tf.text = "WCCM 2026"
             p2 = tf.add_paragraph()
@@ -132,7 +133,7 @@ def s03_gap():
              "MULTIPHYSICS FE FRAMEWORKS (MOOSE)", size=11.5, color=BLUE, bold=True)
     add_bullets(s, MARGIN + Inches(0.32), BODY_TOP + Inches(0.75), col_w - Inches(0.64), ch - Inches(0.95), [
         "Boundary conditions, contact, parallel domain decomposition",
-        "Coupled-physics machinery, meshing, restart, in-situ output",
+        "Coupled-physics machinery, in-situ output, meshing, restart",
         [("But: materials evaluated ", {}),
          ("point-by-point on CPU", {"bold": True}),
          (" inside the element loop", {})],
@@ -154,11 +155,11 @@ def s03_gap():
     gx = MARGIN + col_w
     add_text(s, gx, BODY_TOP + Inches(0.9), gap_w, Inches(0.5),
              "?", size=32, color=RED, bold=True, align=PP_ALIGN.CENTER)
-    add_text(s, gx + Inches(0.06), BODY_TOP + Inches(1.52), gap_w - Inches(0.12), Inches(1.0),
-             ["per-point calls,", "per-step copies"], size=10.5, color=RED,
+    add_text(s, gx + Inches(0.02), BODY_TOP + Inches(1.52), gap_w - Inches(0.04), Inches(1.0),
+             ["per-point calls,", "per-step copies"], size=12.5, color=RED,
              align=PP_ALIGN.CENTER, italic=True, leading=1.15)
     # this-talk band
-    ty = BODY_TOP + ch + Inches(0.42)
+    ty = BODY_TOP + ch + Inches(0.55)
     add_card(s, MARGIN, ty, CONTENT_W, Inches(1.0), fill=BLUE_T, line=BLUE, line_w=1.0)
     add_text(s, MARGIN + Inches(0.3), ty, CONTENT_W - Inches(0.6), Inches(1.0),
              [[("This talk: ", {"bold": True, "color": BLUE}),
@@ -206,9 +207,9 @@ def s05_integration():
                (" MOOSE integrator", {})]], size=14, color=BODY)
     eqs = [
         (r"$\mathbf{a}_n \;=\; \mathbf{M}_L^{-1}\big(\mathbf{F}^{\mathrm{ext}}_n - \mathbf{F}^{\mathrm{int}}_n\big)$",
-         "lumped mass: pointwise divide, no solver", "accel_lumped_mass"),
+         "pointwise divide — no solver", "accel_lumped_mass"),
         (r"$\mathbf{v}_{n+\frac{1}{2}} \;=\; \mathbf{v}_{n-\frac{1}{2}} \;+\; \tfrac{\Delta t_n + \Delta t_{n-1}}{2}\;\mathbf{a}_n$",
-         "midpoint velocity update (variable Δt)", "velocity_midpoint_update"),
+         "variable-Δt midpoint velocity update", "velocity_midpoint_update"),
         (r"$\mathbf{u}_{n+1} \;=\; \mathbf{u}_n \;+\; \Delta t_n\,\mathbf{v}_{n+\frac{1}{2}}$",
          "displacement update", "displacement_update"),
     ]
@@ -294,7 +295,7 @@ def s06_stability_cost():
              "schematic; plasticity dominates the step cost",
              size=10.5, color=MUTED, italic=True)
     takeaway(s, [("Explicit runtime  ≈  steps × material-update cost.", {"bold": True, "color": INK}),
-                 (" The step count is physics. The material cost is engineering — and it is the target.", {})])
+                 (" The step count is physics; the material cost is the target.", {})])
 
 
 # ================================================================ 7 MOOSE
@@ -310,7 +311,7 @@ def s07_moose():
         ("Contact", "mortar and node-face algorithms — architecture-compatible with this interface"),
         ("Parallel execution", "MPI domain decomposition, scalable assembly and solves"),
         ("Coupled physics", "heat conduction, neutronics, porous flow, ... in one input file"),
-        ("Meshing & output", "mesh generators, adaptivity, Exodus/CSV in-situ output"),
+        ("Meshing & output", "mesh generators, adaptivity, in-situ Exodus/CSV output"),
         ("Ecosystem", "NQA-1 quality assurance; large application family (BISON, Grizzly, ...)"),
     ]
     cw = (CONTENT_W - Inches(0.8)) / 3
@@ -343,14 +344,14 @@ def s08_neml2():
     add_card(s, MARGIN, dy, lw, Inches(2.05), fill=WHITE, line=CARD_LN)
     add_text(s, MARGIN + Inches(0.24), dy + Inches(0.14), lw, Inches(0.3),
              "A MODEL = SMALL OPERATORS, COMPOSED", size=10, color=MUTED, bold=True)
-    ops = ["elasticity", "flow rule", "hardening", "rate\nsensitivity", "state\nupdate"]
+    ops = [["elasticity"], ["flow rule"], ["hardening"], ["rate", "sensitivity"], ["state", "update"]]
     ow = Inches(1.02)
     arrow_gap = Inches(0.26)
     ox = MARGIN + Inches(0.28)
     oy = dy + Inches(0.56)
     for i, op in enumerate(ops):
         c = add_card(s, ox, oy, ow, Inches(0.85), fill=GREEN_T, line=GREEN, line_w=1.0)
-        shape_text(c, op, size=10.5, color=INK)
+        shape_text(c, [[(line_, {})] for line_ in op], size=10.5, color=INK, leading=1.05)
         if i < len(ops) - 1:
             add_arrow(s, ox + ow + Inches(0.03), oy + Inches(0.425),
                       ox + ow + arrow_gap - Inches(0.03), oy + Inches(0.425),
@@ -365,8 +366,8 @@ def s08_neml2():
          ("one batched call", {"bold": True})],
         [("Device-portable:", {"bold": True}),
          (" libTorch (PyTorch C++) backend runs the same model on CPU or GPU", {})],
-        [("NEML2 library benchmark", {"bold": True}),
-         (" (crystal plasticity): 42,500 s (NEML, CPU) → 68 s on one GPU", {})],
+        [("NEML2 library benchmark:", {"bold": True}),
+         (" 42,500 s (NEML, CPU) → 68 s on one GPU", {})],
     ], size=14, gap=9, bullet_color=GREEN)
     # right: batching visual
     px = MARGIN + lw + Inches(0.5)
@@ -434,7 +435,7 @@ def s09_contribution():
     add_card(s, MARGIN, fy, CONTENT_W, Inches(0.85), fill=CARD, line=CARD_LN)
     add_text(s, MARGIN + Inches(0.3), fy, CONTENT_W - Inches(0.6), Inches(0.85),
              [[("Foundation, unchanged:  ", {"bold": True, "color": MUTED, "size": 12}),
-               ("MOOSE boundary conditions  ·  parallel domain decomposition  ·  meshing & output  ·  contact-compatible architecture", {"color": BODY})]],
+               ("MOOSE boundary conditions  ·  parallel domain decomposition  ·  meshing & output  ·  contact (architecture-compatible)", {"color": BODY})]],
              size=13.5, anchor=MSO_ANCHOR.MIDDLE)
     takeaway(s, [("All of it is open source in the MOOSE framework and solid-mechanics module; ", {}),
                  ("the NEML2 force path is verified against conventional MOOSE on CPU and CUDA.", {"bold": True, "color": INK})])
@@ -466,7 +467,7 @@ def s10_force_path():
                color=INK, leading=1.1)
     h2 = add_card(s, PAGE_W - MARGIN - end_w, ey, end_w, stage_h, fill=WHITE, line=CARD_LN, line_w=1.0)
     shape_text(h2, [[("residual →", {"size": 10.5, "color": MUTED})],
-                    [("ExplicitMixed-", {"bold": True, "size": 11.5})],
+                    [("ExplicitMixed", {"bold": True, "size": 11.5})],
                     [("Order", {"bold": True, "size": 11.5})],
                     [("advance u", {"size": 10.5})],
                     [("one download / step", {"size": 9.5, "color": BLUE, "italic": True})]],
@@ -514,7 +515,7 @@ def s10_force_path():
     add_card(s, dev_x + Inches(0.3), ny, dev_w - Inches(0.6), Inches(0.64), fill=WHITE, line=GREEN, line_w=0.75)
     add_text(s, dev_x + Inches(0.5), ny, dev_w - Inches(1.0), Inches(0.64),
              [[("built once, cached on device:  ", {"bold": True, "size": 10.5, "color": GREEN}),
-               ("shape functions φ, ∇φ,  DOF maps,  quadrature weights JxW  — rebuilt only on mesh change", {"size": 10.5})]],
+               ("shape functions φ, ∇φ,  DOF maps,  weights JxW — rebuilt only on mesh change", {"size": 10.5})]],
              size=10.5, color=BODY, anchor=MSO_ANCHOR.MIDDLE)
     takeaway(s, [("The interior force computation never touches an element loop:", {"bold": True, "color": INK}),
                  (" a short sequence of batched tensor ops.", {})])
@@ -553,9 +554,9 @@ def s11_state():
     # arrows crossing the boundary
     add_arrow(s, bx + Inches(1.45), host_y1 + Inches(0.44), bx + Inches(2.6), dev_y1 - Inches(0.08),
               color=RED, weight=1.5)
-    add_arrow(s, bx + Inches(4.8), dev_y1 + Inches(0.18), bx + Inches(5.6), host_y1 + Inches(0.44),
+    add_arrow(s, bx + Inches(5.1), dev_y1 - Inches(0.08), bx + Inches(5.6), host_y1 + Inches(0.44),
               color=RED, weight=1.5)
-    add_text(s, bx + Inches(7.4), y1 + Inches(0.62), Inches(2.6), Inches(1.1),
+    add_text(s, bx + Inches(7.35), y1 + Inches(0.62), Inches(2.8), Inches(1.1),
              "state copied down and back up every step — scales with model complexity",
              size=10.5, color=RED, italic=True, leading=1.1)
     # ---- this-work half
@@ -581,7 +582,7 @@ def s11_state():
               color=GREEN, weight=1.5)
     add_arrow(s, bx + Inches(5.2), dev_y2 - Inches(0.08), bx + Inches(5.75), host_y2 + Inches(0.44),
               color=GREEN, weight=1.5)
-    add_text(s, bx + Inches(7.4), y2 + Inches(0.62), Inches(2.6), Inches(1.1),
+    add_text(s, bx + Inches(7.35), y2 + Inches(0.62), Inches(2.8), Inches(1.1),
              "per step: one solution upload, one force download — independent of model complexity",
              size=10.5, color=GREEN, italic=True, leading=1.1)
     takeaway(s, [("The richer the model, the more this matters", {"bold": True, "color": INK}),
@@ -598,9 +599,9 @@ def s12_summary():
         ("ExplicitMixedOrder advances mechanics + first-order fields, no solver",
          "lumped mass, zero linear iterations; upstreamed to MOOSE", BLUE),
         ("NEML2 assembles the internal nodal forces on the device",
-         "batched over all elements; state advances in place; one upload + one download per step", GREEN),
+         "batched over all elements; state advances in place; one upload + one download per step", BLUE),
         ("MOOSE keeps BCs, parallelism, outputs — unchanged",
-         "and the path is verified to match conventional MOOSE assembly (CPU and CUDA test suite)", GREEN),
+         "and the path is verified to match conventional MOOSE assembly (CPU and CUDA test suite)", BLUE),
     ]
     y = BODY_TOP + Inches(0.1)
     for i, (head, sub, color) in enumerate(rows):
@@ -628,11 +629,11 @@ def s13_verification():
     add_text(s, MARGIN, BODY_TOP - Inches(0.08), CONTENT_W, Inches(0.35),
              [[("Matched-constitutive comparison: ", {}),
                ("the same J2 model through both force paths", {"bold": True, "color": INK}),
-               (" — same mesh, same steps; only the assembly implementation differs", {})]],
+               (" — same mesh, same steps; only the assembly differs", {})]],
              size=14.5, color=BODY)
     # figure left: field / field / difference strips
-    fw = Inches(7.2)
-    fh = Inches(7.2 / fig_aspect("fig_verification.png"))
+    fw = Inches(7.6)
+    fh = Inches(7.6 / fig_aspect("fig_verification.png"))
     fy = BODY_TOP + Inches(0.5)
     s.shapes.add_picture(str(FIGS / "fig_verification.png"), MARGIN, fy, fw, fh)
     add_text(s, MARGIN + Inches(0.1), fy + fh + Inches(0.08), fw, Inches(0.3),
@@ -657,8 +658,8 @@ def s13_verification():
     add_text(s, px, sy + Inches(0.05), pw, Inches(0.8),
              "the difference panel needs a 10⁸ magnification to show anything at all",
              size=11.5, color=MUTED, italic=True, leading=1.1)
-    takeaway(s, [("Any error in the interface would appear here — it doesn't.", {"bold": True, "color": INK}),
-                 (" The NEML2 force path reproduces MOOSE's native assembly to one part in 10", {}),
+    takeaway(s, [("Any error in the interface would appear here — it doesn’t.", {"bold": True, "color": INK}),
+                 (" The NEML2 force path matches MOOSE’s native assembly to a few parts in 10", {}),
                  ("8", {"sup": True}),
                  (".", {})])
 
@@ -669,8 +670,8 @@ def s14_taylor():
     add_text(s, MARGIN, BODY_TOP - Inches(0.08), CONTENT_W, Inches(0.35),
              [[("OFHC copper slug at ", {}),
                ("235.9 m/s", {"bold": True, "color": INK}),
-               (" — Johnson–Cook plasticity in NEML2,  Δt = 10 ns,  ", {}),
-               ("~12,000 explicit steps", {"bold": True, "color": INK})]],
+               (" — Johnson–Cook plasticity in NEML2 · Δt = 10 ns · ", {}),
+               ("11,000+ explicit steps", {"bold": True, "color": INK})]],
              size=14.5, color=BODY)
     # top: plastic-strain cutaway sequence (full width)
     pw_ = Inches(9.6)
@@ -681,9 +682,9 @@ def s14_taylor():
              "cutaway views (near half removed) — plastic strain localizes at the impact foot; gray plane = rigid anvil",
              size=11, color=MUTED, italic=True)
     # bottom left: temper comparison renders
-    fw2 = Inches(4.5)
-    fh2 = Inches(4.5 / fig_aspect("fig_profile.png"))
-    fy2 = py_ + ph_ + Inches(0.35)
+    fw2 = Inches(4.3)
+    fh2 = Inches(4.3 / fig_aspect("fig_profile.png"))
+    fy2 = py_ + ph_ + Inches(0.32)
     s.shapes.add_picture(str(FIGS / "fig_profile.png"), MARGIN, fy2, fw2, fh2)
     # bottom right: temper story
     bx = MARGIN + fw2 + Inches(0.5)
@@ -704,25 +705,25 @@ def s15_thermal():
     s = new_slide(prs, None, "Coupled thermo-mechanics: heating from plastic work",
                   number=15, total=TOTAL)
     add_text(s, MARGIN, BODY_TOP - Inches(0.08), CONTENT_W, Inches(0.35),
-             [[("Same coupled run — temperature integrated ", {}),
+             [[("The run you just saw is coupled — temperature integrated ", {}),
                ("inside the NEML2 model", {"bold": True, "color": INK}),
-               (" (adiabatic Taylor–Quinney heating, β = 0.9), in the same batched update", {})]],
+               (" (adiabatic Taylor–Quinney heating, β = 0.9)", {})]],
              size=14.5, color=BODY)
     # top: temperature-rise cutaway sequence
-    pw_ = Inches(9.0)
-    ph_ = Inches(9.0 / fig_aspect("fig_thermal.png"))
-    py_ = BODY_TOP + Inches(0.46)
-    s.shapes.add_picture(str(FIGS / "fig_thermal.png"), MARGIN + Inches(0.9), py_, pw_, ph_)
-    add_text(s, MARGIN + Inches(1.0), py_ + ph_ + Inches(0.03), Inches(11), Inches(0.28),
+    pw_ = Inches(8.2)
+    ph_ = Inches(8.2 / fig_aspect("fig_thermal.png"))
+    py_ = BODY_TOP + Inches(0.44)
+    s.shapes.add_picture(str(FIGS / "fig_thermal.png"), MARGIN + Inches(1.3), py_, pw_, ph_)
+    add_text(s, MARGIN + Inches(1.4), py_ + ph_ + Inches(0.03), Inches(11), Inches(0.28),
              "temperature rise above 300 K, cutaway views — run to 114 µs, >99% of the impact kinetic energy dissipated",
              size=11, color=MUTED, italic=True)
     # bottom: three fact cards
-    cy = py_ + ph_ + Inches(0.4)
+    cy = py_ + ph_ + Inches(0.38)
     cards = [
         ("Feeds back into the flow stress",
          "the hot foot softens (Johnson–Cook Θ = 1 − T*ᵐ) and flows more easily", RED),
         ("Adiabatic by physics, not assumption",
-         "diffusion length √(αt) ≈ 0.1 mm ≪ element size over 120 µs — no heat-conduction PDE needed", BLUE),
+         "diffusion length √(αt) ≈ 0.1 mm ≪ element size over the 114 µs run — no heat-conduction PDE needed", BLUE),
         ("Three extra NEML2 model blocks",
          "no new MOOSE modules, no new transfers — temperature state lives on the device like everything else", GREEN),
     ]
@@ -735,9 +736,8 @@ def s15_thermal():
                  t, size=12, color=INK, bold=True, leading=1.02)
         add_text(s, cx + Inches(0.24), cy + Inches(0.43), cw - Inches(0.44), Inches(0.6),
                  d, size=10, color=BODY, leading=1.06)
-    takeaway(s, [("The abstract's thermo-mechanical claim, delivered:", {"bold": True, "color": INK}),
-                 (" ΔT ≈ 120 K at the mushroom foot, captured end-to-end through the NEML2 force path.", {})],
-             y=Inches(5.98))
+    takeaway(s, [("The abstract’s thermo-mechanical claim, delivered:", {"bold": True, "color": INK}),
+                 (" a peak ΔT of 119 K at the mushroom foot, captured through the NEML2 force path.", {})])
 
 
 def build():
