@@ -24,9 +24,12 @@
 [Solvers]
   [newton]
     type = NewtonWithLineSearch
-    abs_tol = 1e-8
-    rel_tol = 1e-9
-    max_its = 50
+    # thermal softening stiffens the late-time return map (large ep, Theta < 0.9):
+    # more iterations + slightly relaxed tolerances than the isothermal variant.
+    # abs_tol 1e-7 is still ~1e3x tighter than a typical per-step ep increment.
+    abs_tol = 1e-7
+    rel_tol = 1e-8
+    max_its = 250
     linear_solver = 'lu'
   []
   [lu]

@@ -32,7 +32,7 @@ def fig_aspect(name):
         return im.size[0] / im.size[1]
 
 
-TOTAL = 14
+TOTAL = 15
 BODY_TOP = Inches(1.32)
 CONTENT_W = PAGE_W - 2 * MARGIN
 MONO = "Consolas"
@@ -631,8 +631,8 @@ def s13_verification():
                (" — same mesh, same steps; only the assembly implementation differs", {})]],
              size=14.5, color=BODY)
     # figure left: field / field / difference strips
-    fw = Inches(7.7)
-    fh = Inches(7.7 / fig_aspect("fig_verification.png"))
+    fw = Inches(7.2)
+    fh = Inches(7.2 / fig_aspect("fig_verification.png"))
     fy = BODY_TOP + Inches(0.5)
     s.shapes.add_picture(str(FIGS / "fig_verification.png"), MARGIN, fy, fw, fh)
     add_text(s, MARGIN + Inches(0.1), fy + fh + Inches(0.08), fw, Inches(0.3),
@@ -672,23 +672,23 @@ def s14_taylor():
                (" — Johnson–Cook plasticity in NEML2,  Δt = 10 ns,  ", {}),
                ("~12,000 explicit steps", {"bold": True, "color": INK})]],
              size=14.5, color=BODY)
-    # top: plastic-strain cross-section sequence (full width)
-    pw_ = Inches(11.4)
-    ph_ = Inches(11.4 / fig_aspect("fig_pstrain.png"))
-    py_ = BODY_TOP + Inches(0.48)
-    s.shapes.add_picture(str(FIGS / "fig_pstrain.png"), MARGIN + Inches(0.2), py_, pw_, ph_)
-    add_text(s, MARGIN + Inches(0.3), py_ + ph_ + Inches(0.05), Inches(11), Inches(0.28),
-             "meridional cross-sections (azimuthally projected) — plastic strain localizes at the impact foot",
+    # top: plastic-strain cutaway sequence (full width)
+    pw_ = Inches(9.6)
+    ph_ = Inches(9.6 / fig_aspect("fig_pstrain.png"))
+    py_ = BODY_TOP + Inches(0.46)
+    s.shapes.add_picture(str(FIGS / "fig_pstrain.png"), MARGIN + Inches(0.6), py_, pw_, ph_)
+    add_text(s, MARGIN + Inches(0.7), py_ + ph_ + Inches(0.03), Inches(11), Inches(0.28),
+             "cutaway views (near half removed) — plastic strain localizes at the impact foot; gray plane = rigid anvil",
              size=11, color=MUTED, italic=True)
-    # bottom left: mirrored temper profile
-    fw2 = Inches(5.9)
-    fh2 = Inches(5.9 / fig_aspect("fig_profile.png"))
-    fy2 = py_ + ph_ + Inches(0.34)
+    # bottom left: temper comparison renders
+    fw2 = Inches(4.5)
+    fh2 = Inches(4.5 / fig_aspect("fig_profile.png"))
+    fy2 = py_ + ph_ + Inches(0.35)
     s.shapes.add_picture(str(FIGS / "fig_profile.png"), MARGIN, fy2, fw2, fh2)
     # bottom right: temper story
     bx = MARGIN + fw2 + Inches(0.5)
     bw = CONTENT_W - fw2 - Inches(0.5)
-    add_bullets(s, bx, fy2 + Inches(0.3), bw, fh2 - Inches(0.2), [
+    add_bullets(s, bx, fy2 + Inches(0.25), bw, fh2 - Inches(0.2), [
         [("Same mesh, BCs, integrator — the copper temper is swapped by ", {}),
          ("changing only NEML2 material parameters", {"bold": True})],
         [("Full-hard ", {}),
@@ -697,6 +697,47 @@ def s14_taylor():
          ("58%", {"bold": True, "color": BLUE}),
          (" axial shortening — temper sensitivity captured", {})],
     ], size=13.5, gap=12)
+
+
+# ================================================================ 15 RESULTS: THERMAL
+def s15_thermal():
+    s = new_slide(prs, None, "Coupled thermo-mechanics: heating from plastic work",
+                  number=15, total=TOTAL)
+    add_text(s, MARGIN, BODY_TOP - Inches(0.08), CONTENT_W, Inches(0.35),
+             [[("Same coupled run — temperature integrated ", {}),
+               ("inside the NEML2 model", {"bold": True, "color": INK}),
+               (" (adiabatic Taylor–Quinney heating, β = 0.9), in the same batched update", {})]],
+             size=14.5, color=BODY)
+    # top: temperature-rise cutaway sequence
+    pw_ = Inches(9.0)
+    ph_ = Inches(9.0 / fig_aspect("fig_thermal.png"))
+    py_ = BODY_TOP + Inches(0.46)
+    s.shapes.add_picture(str(FIGS / "fig_thermal.png"), MARGIN + Inches(0.9), py_, pw_, ph_)
+    add_text(s, MARGIN + Inches(1.0), py_ + ph_ + Inches(0.03), Inches(11), Inches(0.28),
+             "temperature rise above 300 K, cutaway views — run to 114 µs, >99% of the impact kinetic energy dissipated",
+             size=11, color=MUTED, italic=True)
+    # bottom: three fact cards
+    cy = py_ + ph_ + Inches(0.4)
+    cards = [
+        ("Feeds back into the flow stress",
+         "the hot foot softens (Johnson–Cook Θ = 1 − T*ᵐ) and flows more easily", RED),
+        ("Adiabatic by physics, not assumption",
+         "diffusion length √(αt) ≈ 0.1 mm ≪ element size over 120 µs — no heat-conduction PDE needed", BLUE),
+        ("Three extra NEML2 model blocks",
+         "no new MOOSE modules, no new transfers — temperature state lives on the device like everything else", GREEN),
+    ]
+    cw = (CONTENT_W - Inches(0.8)) / 3
+    for i, (t, d, c) in enumerate(cards):
+        cx = MARGIN + i * (cw + Inches(0.4))
+        add_card(s, cx, cy, cw, Inches(1.05))
+        add_rect(s, cx, cy + Inches(0.09), Inches(0.055), Inches(0.87), c)
+        add_text(s, cx + Inches(0.24), cy + Inches(0.08), cw - Inches(0.44), Inches(0.3),
+                 t, size=12, color=INK, bold=True, leading=1.02)
+        add_text(s, cx + Inches(0.24), cy + Inches(0.43), cw - Inches(0.44), Inches(0.6),
+                 d, size=10, color=BODY, leading=1.06)
+    takeaway(s, [("The abstract's thermo-mechanical claim, delivered:", {"bold": True, "color": INK}),
+                 (" ΔT ≈ 120 K at the mushroom foot, captured end-to-end through the NEML2 force path.", {})],
+             y=Inches(5.98))
 
 
 def build():
@@ -714,6 +755,7 @@ def build():
     s12_summary()
     s13_verification()
     s14_taylor()
+    s15_thermal()
     prs.save(OUT)
     print(f"wrote {OUT}")
 

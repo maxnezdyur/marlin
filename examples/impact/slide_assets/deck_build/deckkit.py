@@ -305,6 +305,30 @@ def shape_text(sh, runs, size=13, color=INK, bold=False, align=PP_ALIGN.CENTER,
 INL_POTX = HERE.parent / "INL_2022_hexLight_wide.potx"
 
 
+def _fix_footer_clip(data):
+    """The template's 'IDAHO NATIONAL LABORATORY' footer text box is only
+    0.107in tall, so glyph descenders clip. Grow the box upward to 0.32in."""
+    import re
+    text = data.decode("utf-8")
+    i = text.find("IDAHO NATIONAL LABORATORY")
+    while i != -1:
+        seg = text[:i]
+        m = None
+        for m in re.finditer(r'<a:off x="(-?\d+)" y="(-?\d+)"/><a:ext cx="(\d+)" cy="(\d+)"/>', seg):
+            pass  # keep the last (nearest preceding) transform
+        if m:
+            x, y, cx, cy = map(int, m.groups())
+            if cy < 200000:  # abnormally short box (< ~0.22in)
+                new_cy = 292608          # 0.32 in
+                new_y = y + cy - new_cy  # keep the text baseline area, grow upward
+                old = m.group(0)
+                new = (f'<a:off x="{x}" y="{new_y}"/>'
+                       f'<a:ext cx="{cx}" cy="{new_cy}"/>')
+                text = text[:m.start()] + new + text[m.end():]
+        i = text.find("IDAHO NATIONAL LABORATORY", i + 10)
+    return text.encode("utf-8")
+
+
 def load_inl_base():
     """Patch the INL .potx into a .pptx base, open it, strip its sample slides."""
     import zipfile
@@ -321,6 +345,9 @@ def load_inl_base():
                     data = data.replace(
                         b"presentationml.template.main+xml",
                         b"presentationml.presentation.main+xml")
+                if (item.filename.startswith(("ppt/slideLayouts/", "ppt/slideMasters/"))
+                        and b"IDAHO NATIONAL LABORATORY" in data):
+                    data = _fix_footer_clip(data)
                 zout.writestr(item, data)
     prs = Presentation(base)
     # drop the template's sample slides
