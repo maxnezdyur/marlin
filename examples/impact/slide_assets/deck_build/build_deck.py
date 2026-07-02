@@ -38,7 +38,7 @@ CONTENT_W = PAGE_W - 2 * MARGIN
 MONO = "Consolas"
 
 
-def takeaway(s, text_segs, y=Inches(5.76), fill=GOLD_T, line=GOLD):
+def takeaway(s, text_segs, y=Inches(5.88), fill=GOLD_T, line=GOLD):
     add_card(s, MARGIN, y, CONTENT_W, Inches(0.72), fill=fill, line=line, line_w=1.0)
     add_text(s, MARGIN + Inches(0.3), y, CONTENT_W - Inches(0.6), Inches(0.72),
              [text_segs], size=15, color=BODY, anchor=MSO_ANCHOR.MIDDLE)
