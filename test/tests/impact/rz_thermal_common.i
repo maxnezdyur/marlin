@@ -4,7 +4,7 @@
 # rz_thermal_conventional.i (conventional NEML2 coupling).
 
 # timestep in seconds
-dt = 1e-8
+dt = 1e-7
 
 # initial downward velocity in m/s
 v = 200
