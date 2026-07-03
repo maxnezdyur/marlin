@@ -1,0 +1,5 @@
+NODAL VARIABLES
+	disp_x relative 1e-6 floor 1e-12
+	disp_y relative 1e-6 floor 1e-12
+	force_x relative 1e-6 floor 1e-2
+	force_y relative 1e-6 floor 1e-2

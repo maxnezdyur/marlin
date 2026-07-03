@@ -150,4 +150,32 @@
     recover = false
     restep = false
   []
+  [rz_jc_mult_fbar]
+    type = Exodiff
+    input = rz_jc_mult_fbar_neml2.i
+    exodiff = rz_jc_mult_fbar_out.e
+    abs_zero = 1e-7
+    requirement = 'The NEML2 deformation gradient gatherer shall apply the F-bar volumetric correction over the batched quadrature data when stabilize_strain is enabled.'
+    compute_devices = 'cpu'
+    capabilities = 'method=opt & neml2'
+    max_parallel = 1
+    max_threads = 1
+    recover = false
+    restep = false
+  []
+  [rz_jc_mult_fbar_conventional]
+    type = Exodiff
+    input = rz_jc_mult_fbar_conventional.i
+    cli_args = 'Outputs/file_base=rz_jc_mult_fbar_out'
+    exodiff = rz_jc_mult_fbar_out.e
+    custom_cmp = rz_jc_mult_fbar_conventional.exodiff
+    prereq = rz_jc_mult_fbar
+    requirement = 'The batched F-bar correction shall reproduce the conventional Lagrangian kernel system with strain stabilization at machine precision.'
+    compute_devices = 'cpu'
+    capabilities = 'method=opt & neml2'
+    max_parallel = 1
+    max_threads = 1
+    recover = false
+    restep = false
+  []
 []
