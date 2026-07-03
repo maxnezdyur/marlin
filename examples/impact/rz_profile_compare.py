@@ -63,7 +63,28 @@ def read_exodus_rz(path: str, units_to_mm: float = 1000.0):
                         dtype=np.float64)
     finally:
         nc.close()
-    return (r0 + dr) * units_to_mm, (z0 + dz) * units_to_mm
+    r = (r0 + dr) * units_to_mm
+    z = (z0 + dz) * units_to_mm
+
+    # Outer-boundary polyline (structured GeneratedMeshGenerator grid): the
+    # bottom face (ordered axis -> edge) followed by the lateral surface
+    # (ordered bottom -> top). Sampling the polyline densely avoids the
+    # zigzag artifact of node-binning when surface nodes cluster in z.
+    eps = 1e-12
+    bot = np.where(np.abs(z0 - z0.min()) < eps)[0]
+    side = np.where(np.abs(r0 - r0.max()) < eps)[0]
+    bot = bot[np.argsort(r0[bot])]
+    side = side[np.argsort(z0[side])]
+    contour = np.concatenate([bot, side])
+    cr, cz = r[contour], z[contour]
+    # densely resample each segment
+    rs, zs = [], []
+    for a in range(len(cr) - 1):
+        t = np.linspace(0.0, 1.0, 30, endpoint=False)
+        rs.append(cr[a] + t * (cr[a + 1] - cr[a]))
+        zs.append(cz[a] + t * (cz[a + 1] - cz[a]))
+    rs.append(cr[-1:]); zs.append(cz[-1:])
+    return r, z, np.concatenate(rs), np.concatenate(zs)
 
 
 # ---------------------------------------------------------------- profiles
@@ -80,14 +101,15 @@ def binned_max_radius(zs: np.ndarray, r: np.ndarray, nbins: int = NBINS):
     return centers[keep], rmax[keep]
 
 
-def sim_profile(r: np.ndarray, z: np.ndarray):
-    """Sim profile + scalar metrics. Foot (impact face) is at z_min -> zs = z - z_min."""
+def sim_profile(r: np.ndarray, z: np.ndarray, cr: np.ndarray, cz: np.ndarray):
+    """Sim profile + scalar metrics from the outer-boundary contour.
+    Foot (impact face) is at z_min -> zs = z - z_min."""
     z_min, z_max = z.min(), z.max()
-    zs = z - z_min
     length = z_max - z_min
-    foot_r = r[z < z_min + 0.5].max()
-    rear_r = r[z > z_max - 2.0].max()
-    zc, rp = binned_max_radius(zs, r)
+    czs = cz - z_min
+    foot_r = cr[czs < 0.5].max()
+    rear_r = cr[czs > length - 2.0].max()
+    zc, rp = binned_max_radius(czs, cr)
     return zc, rp, length, foot_r, rear_r
 
 
@@ -164,8 +186,8 @@ def main(argv=None) -> int:
     ap.add_argument("--out", default="rz_profile", help="output file prefix")
     args = ap.parse_args(argv)
 
-    r, z = read_exodus_rz(args.exodus)
-    sim_z, sim_r, sim_len, sim_foot, sim_rear = sim_profile(r, z)
+    r, z, cr, cz = read_exodus_rz(args.exodus)
+    sim_z, sim_r, sim_len, sim_foot, sim_rear = sim_profile(r, z, cr, cz)
 
     verts = read_binary_stl_vertices(args.stl)
     exp_z, exp_r, exp_len, exp_foot, exp_rear = stl_profile(verts)
