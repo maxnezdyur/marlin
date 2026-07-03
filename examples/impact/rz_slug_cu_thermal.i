@@ -5,8 +5,8 @@
   [slug]
     type = GeneratedMeshGenerator
     dim = 2
-    nx = 20
-    ny = 150
+    nx = 4
+    ny = 25
     # nx = 20
     # ny = 10
     xmin = 0
@@ -326,7 +326,7 @@
   type = Transient
   solve_type = NEWTON
   dt = ${units 5e-8 s} # largest step the coupled Newton takes reliably; 1e-7 cut-retries every step
-  end_time = ${units 1.5e-4 s} # 150 microseconds
+  num_steps = 1000
   automatic_scaling = true
   compute_scaling_once = false
   # full Newton with the T<->mechanics cross terms only approximate in the
