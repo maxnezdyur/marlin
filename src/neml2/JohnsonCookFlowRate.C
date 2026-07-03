@@ -58,6 +58,14 @@ JohnsonCookFlowRate::expected_options()
       "Prior accumulated equivalent plastic strain from the specimen temper (e.g. ~0.37 for H04 "
       "full-hard copper). Added to the evolving plastic strain in the hardening term, "
       "sigma_y = A + B (ep + ep0)^n, so the material starts pre-hardened. Default 0 = annealed.");
+  options.add<double>(
+      "max_homologous_temperature",
+      0.9999,
+      "Upper clamp on the homologous temperature T* in the thermal softening term "
+      "Theta = 1 - T*^m. The default keeps a vanishing strength floor; lowering it (e.g. 0.95) "
+      "retains a finite flow-stress floor near melt, which regularizes the adiabatic "
+      "heat-soften-strain feedback that otherwise localizes in a single element when conduction "
+      "is not modeled.");
 
   return options;
 }
@@ -77,6 +85,7 @@ JohnsonCookFlowRate::JohnsonCookFlowRate(const OptionSet & options)
     _eps0(declare_parameter<Scalar>("eps0", "reference_strain_rate", /*allow_nonlinear=*/true)),
     _T_ref(options.get<double>("reference_temperature")),
     _T_melt(options.get<double>("melting_temperature")),
+    _T_star_max(options.get<double>("max_homologous_temperature")),
     _ep0(options.get<double>("initial_plastic_strain"))
 {
 }
@@ -105,9 +114,10 @@ JohnsonCookFlowRate::set_value(bool out, bool dout_din, bool /*d2out_din2*/)
     // T* = (T - T_ref) / (T_melt - T_ref)
     const auto dT = _T_melt - _T_ref;
     T_star = ((*_T)() - _T_ref) / dT;
-    // Clamp T* to [0, 0.9999] to avoid Theta = 0 or negative
+    // Clamp T* to [0, max_homologous_temperature] to avoid Theta <= 0 (and, with a lowered
+    // clamp, to keep a finite flow-stress floor near melt)
     T_star = macaulay(T_star); // max(T_star, 0)
-    const auto T_star_max = Scalar::full(0.9999, _s.options());
+    const auto T_star_max = Scalar::full(_T_star_max, _s.options());
     // Use torch minimum
     const auto T_star_clamped = T_star - macaulay(T_star - T_star_max);
     Theta = one - pow(T_star_clamped, _m);

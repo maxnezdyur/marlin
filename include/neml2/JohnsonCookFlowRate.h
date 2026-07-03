@@ -79,6 +79,9 @@ protected:
   /// Melting temperature
   const double _T_melt;
 
+  /// Upper clamp on the homologous temperature T*
+  const double _T_star_max;
+
   /// Prior accumulated equivalent plastic strain (e.g. cold-work / temper offset);
   /// added to the evolving plastic strain in the hardening term so the material
   /// starts pre-hardened (full-hard temper). Default 0 = annealed.

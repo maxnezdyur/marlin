@@ -133,13 +133,15 @@ heat = 2.6090e-7
   []
   # JC consistency flow stress: rate via backward-difference of ep (Old[] + dt),
   # thermal softening via the LAGGED adiabatic temperature rise dT (T* = dT/1038),
-  # matching the NEML2 model's one-step temperature lag.
+  # matching the NEML2 model's one-step temperature lag. T* caps at 0.95 (a ~5%
+  # flow-stress floor near melt) to regularize adiabatic shear runaway at the
+  # foot rim, matching the NEML2 model's max_homologous_temperature.
   [flow_stress]
     type = DerivativeParsedMaterial
     property_name = flow_stress
     expression = '(${A} + ${B} * (effective_plastic_strain + ${ipe})^${n})'
                  ' * (1 + ${C} * log(max((effective_plastic_strain - ep_old) / dt, ${ep0}) / ${ep0}))'
-                 ' * (1 - min(max(dT_old / 1038, 0), 0.9999)^${m})'
+                 ' * (1 - min(max(dT_old / 1038, 0), 0.95)^${m})'
     material_property_names = 'effective_plastic_strain ep_old:=Old[effective_plastic_strain] dT_old:=Old[dT]'
     additional_derivative_symbols = 'effective_plastic_strain'
     extra_symbols = 'dt'
