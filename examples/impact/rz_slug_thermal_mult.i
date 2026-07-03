@@ -84,6 +84,16 @@ ny = 80
     penalty = 1e9
     wall_position = 0
   []
+  [anvil_friction]
+    type = RigidWallCoulombFrictionNodalKernel
+    variable = disp_x
+    normal_variable = disp_y
+    normal_component = 1
+    penalty = 1e9
+    mu = 0.1
+    wall_position = 0
+    regularization_velocity = 1
+  []
 []
 [BCs]
   [axis]
@@ -144,6 +154,9 @@ ny = 80
     assembly = 'assembly'
     fe = 'fe'
     to_neml2 = 'deformation_gradient'
+    # F-bar: without it the fully integrated quads lock volumetrically at the
+    # crushing foot and the mushroom under-spreads ~15% vs the scan
+    stabilize_strain = true
   []
   [residual]
     type = NEML2StressDivergenceRZ
