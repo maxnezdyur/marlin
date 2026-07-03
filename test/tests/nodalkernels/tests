@@ -13,4 +13,17 @@
     recover = false
     restep = false
   []
+  [rigid_wall_friction]
+    type = CSVDiff
+    input = rigid_wall_friction.i
+    csvdiff = rigid_wall_friction_out.csv
+    abs_zero = 1e-10
+    requirement = 'The system shall apply regularized node-wise Coulomb friction against a rigid wall such that a block sliding tangentially during a bounce loses tangential momentum bounded by the Coulomb limit.'
+    compute_devices = 'cpu'
+    capabilities = 'method=opt'
+    max_parallel = 1
+    max_threads = 1
+    recover = false
+    restep = false
+  []
 []
