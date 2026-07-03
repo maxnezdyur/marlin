@@ -96,4 +96,31 @@
     recover = false
     restep = false
   []
+  [rz_jc_large_def]
+    type = Exodiff
+    input = rz_jc_large_def_neml2.i
+    exodiff = rz_jc_large_def_out.e
+    abs_zero = 1e-7
+    requirement = 'The system shall run a total-Lagrangian Johnson-Cook axisymmetric slug impact through the NEML2 nodal-force path with manage_state_advance, gathering the deformation gradient and assembling the first Piola-Kirchhoff stress divergence.'
+    compute_devices = 'cpu'
+    capabilities = 'method=opt & neml2'
+    max_parallel = 1
+    max_threads = 1
+    recover = false
+    restep = false
+  []
+  [rz_jc_large_def_conventional]
+    type = Exodiff
+    input = rz_jc_large_def_conventional.i
+    exodiff = rz_jc_large_def_out.e
+    custom_cmp = rz_jc_large_def_conventional.exodiff
+    prereq = rz_jc_large_def
+    requirement = 'The total-Lagrangian Johnson-Cook NEML2 model shall produce identical results through the manage_state_advance nodal-force path and the conventional custom-PK2 coupling with total-Lagrangian axisymmetric kernels.'
+    compute_devices = 'cpu'
+    capabilities = 'method=opt & neml2'
+    max_parallel = 1
+    max_threads = 1
+    recover = false
+    restep = false
+  []
 []
