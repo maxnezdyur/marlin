@@ -113,19 +113,47 @@ def sim_profile(r: np.ndarray, z: np.ndarray, cr: np.ndarray, cz: np.ndarray):
     return zc, rp, length, foot_r, rear_r
 
 
+def _fit_circle(yy: np.ndarray, zz: np.ndarray):
+    """Algebraic (Kasa) least-squares circle fit; returns (cy, cz, R)."""
+    A = np.column_stack([2 * yy, 2 * zz, np.ones_like(yy)])
+    b = yy**2 + zz**2
+    (cy, cz, c), *_ = np.linalg.lstsq(A, b, rcond=None)
+    return cy, cz, np.sqrt(c + cy**2 + cz**2)
+
+
 def stl_profile(verts: np.ndarray):
     """STL profile + scalar metrics. Axis of revolution is X; foot end is the
-    end whose nearby (within 2 mm) max radius is larger."""
-    x = verts[:, 0]
-    r = np.hypot(verts[:, 1], verts[:, 2])
+    end whose nearby (within 2 mm) max radius is larger.
+
+    The radius per axial slice comes from a least-squares circle fit about the
+    slice centroid: scanned specimens are typically slightly bent/tilted in the
+    scan frame, and a raw max-radius profile inflates by the local axis offset
+    (0.2+ mm for CuH04_235.9). Cross-sections that fit poorly (foot lip / cut
+    face) fall back gracefully since the fit still tracks the mean radius."""
+    v = np.unique(verts, axis=0)
+    x = v[:, 0]
     x_min, x_max = x.min(), x.max()
-    r_lo = r[x < x_min + 2.0].max()
-    r_hi = r[x > x_max - 2.0].max()
-    zs = (x_max - x) if r_hi > r_lo else (x - x_min)  # foot plane -> zs = 0
+    r_raw = np.hypot(v[:, 1], v[:, 2])
+    foot_at_max = r_raw[x > x_max - 2.0].max() > r_raw[x < x_min + 2.0].max()
+
+    edges = np.arange(x_min, x_max + 0.25, 0.25)
+    zc_l, rp_l = [], []
+    for lo, hi in zip(edges[:-1], edges[1:]):
+        m = (x >= lo) & (x < hi)
+        if m.sum() < 30:
+            continue
+        _, _, R = _fit_circle(v[m, 1], v[m, 2])
+        xc = 0.5 * (lo + hi)
+        zc_l.append((x_max - xc) if foot_at_max else (xc - x_min))
+        rp_l.append(R)
+    zc = np.asarray(zc_l)
+    rp = np.asarray(rp_l)
+    o = np.argsort(zc)
+    zc, rp = zc[o], rp[o]
+
     length = x_max - x_min
-    foot_r = r[zs < 0.5].max()
-    rear_r = r[zs > length - 2.0].max()
-    zc, rp = binned_max_radius(zs, r)
+    foot_r = rp[zc < 1.0].max()
+    rear_r = rp[zc > length - 2.0].mean()
     return zc, rp, length, foot_r, rear_r
 
 
