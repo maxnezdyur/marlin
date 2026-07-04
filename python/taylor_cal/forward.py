@@ -14,6 +14,7 @@ from __future__ import annotations
 import glob
 import os
 import shutil
+import re
 import subprocess
 import time
 import uuid
@@ -33,6 +34,14 @@ BASELINE = dict(A=99.7e6, B=262.8e6, n=0.23, C=0.029, ipe=0.37, mu=0.1)
 
 IMPACT_DIR = "/Users/maxnezdyur/projects/exp-dyn/marlin/examples/impact"
 DEFAULT_INPUT = os.path.join(IMPACT_DIR, "rz_slug_thermal_simo.i")
+
+# Reduced-integration NEML2 forward model (fidelity "RI"): ~21 min/run vs
+# ~55 min for the 4-qp F-bar NEML2 run and ~14 min for the Simo twin, and it
+# IS the production model (no cross-code transfer). Constitutive constants
+# live in the NEML2 model file, so each run gets a generated copy passed via
+# the CLI-overridable NEML2/all/input parameter.
+RI_INPUT = os.path.join(IMPACT_DIR, "rz_slug_thermal_mult_ri.i")
+NEML2_MODEL_TEMPLATE = os.path.join(IMPACT_DIR, "johnson_cook_neml2_mult_thermal_cal.i")
 DEFAULT_EXE = "/Users/maxnezdyur/projects/exp-dyn/marlin/marlin-opt"
 
 #: Arrest / runaway thresholds (see spec Section 4).
@@ -73,6 +82,50 @@ def build_cli(theta: dict, velocity: float, file_base: str) -> list:
         f"ipe={th['ipe']:.12g}",
         f"v={float(velocity):.12g}",
         f"NodalKernels/anvil_friction/mu={th['mu']:.12g}",
+        f"Outputs/file_base={file_base}",
+    ]
+
+
+_NEML2_SUB_KEYS = {"A": "A", "B": "B", "n": "n", "C": "C",
+                   "ipe": "initial_plastic_strain"}
+
+
+def write_neml2_model(theta: dict, path: str,
+                      template: str = NEML2_MODEL_TEMPLATE) -> str:
+    """Write a per-run NEML2 model file with theta's constitutive constants
+    substituted inside the [jc_flowrate] block (A, B in Pa; ipe maps to
+    initial_plastic_strain). Scoped to the block because bare names like
+    'A =' also appear as R2Multiplication parameters elsewhere."""
+    th = full_theta(theta)
+    src = open(template).read()
+
+    start = src.index("[jc_flowrate]")
+    end = src.index("[]", start) + 2
+    block = src[start:end]
+
+    for key, hit in _NEML2_SUB_KEYS.items():
+        pat = re.compile(rf"^(\s*){re.escape(hit)} = \S+(.*)$", re.M)
+        block, nsub = pat.subn(rf"\g<1>{hit} = {th[key]:.12g}\g<2>", block)
+        if nsub != 1:
+            raise RuntimeError(
+                f"NEML2 template substitution for '{hit}' matched {nsub} lines "
+                f"(expected exactly 1) in the [jc_flowrate] block of {template}")
+
+    with open(path, "w") as f:
+        f.write(src[:start] + block + src[end:])
+    return path
+
+
+def build_cli_ri(theta: dict, velocity: float, file_base: str,
+                 model_path: str) -> list:
+    """HIT overrides for the reduced-integration NEML2 input: constitutive
+    constants travel via the generated model file; only velocity, friction,
+    the model path, and the file base are CLI."""
+    th = full_theta(theta)
+    return [
+        f"v={float(velocity):.12g}",
+        f"NodalKernels/anvil_friction/mu={th['mu']:.12g}",
+        f"NEML2/all/input={os.path.abspath(model_path)}",
         f"Outputs/file_base={file_base}",
     ]
 
@@ -274,11 +327,18 @@ def run_forward(theta: dict, velocity: float, workdir: str, fidelity: str = "F1"
     """
     workdir = os.path.abspath(workdir)
     os.makedirs(workdir, exist_ok=True)
+    if fidelity == "RI" and input_file == DEFAULT_INPUT:
+        input_file = RI_INPUT
     input_file = os.path.abspath(input_file)
     run_cwd = os.path.dirname(input_file)
     base = "tc_" + uuid.uuid4().hex[:10]
 
-    cmd = [exe, "-i", input_file] + build_cli(theta, velocity, base)
+    if fidelity == "RI":
+        model_path = write_neml2_model(theta, os.path.join(workdir, "jc_model.i"))
+        cli = build_cli_ri(theta, velocity, base, model_path)
+    else:
+        cli = build_cli(theta, velocity, base)
+    cmd = [exe, "-i", input_file] + cli
     cmd += list(extra_cli or [])
 
     timed_out = False
@@ -288,8 +348,12 @@ def run_forward(theta: dict, velocity: float, workdir: str, fidelity: str = "F1"
         log.write(" ".join(cmd) + f"\n(cwd: {run_cwd})\n\n")
         log.flush()
         try:
+            env = dict(os.environ)
+            # one BLAS/torch thread per process: the campaign packs 8 runs
+            env.update(OMP_NUM_THREADS="1", MKL_NUM_THREADS="1",
+                       VECLIB_MAXIMUM_THREADS="1")
             subprocess.run(cmd, cwd=run_cwd, stdout=log,
-                           stderr=subprocess.STDOUT, timeout=timeout_s)
+                           stderr=subprocess.STDOUT, timeout=timeout_s, env=env)
         except subprocess.TimeoutExpired:
             timed_out = True
         except OSError as err:
