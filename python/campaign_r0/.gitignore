@@ -1,0 +1,4 @@
+*
+!.gitignore
+!run_doe.py
+!fit_g2.py
