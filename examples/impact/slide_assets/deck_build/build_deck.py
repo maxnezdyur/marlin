@@ -788,8 +788,8 @@ def s14_taylor():
     add_text(s, MARGIN, BODY_TOP - Inches(0.08), CONTENT_W, Inches(0.35),
              [[("OFHC copper slug at ", {}),
                ("235.9 m/s", {"bold": True, "color": INK}),
-               (" — Johnson–Cook plasticity in NEML2 · Δt = 10 ns · ", {}),
-               ("11,000+ explicit steps", {"bold": True, "color": INK})]],
+               (" — calibrated multiplicative Johnson–Cook · reduced integration · Δt = 10 ns · ", {}),
+               ("9,600+ explicit steps", {"bold": True, "color": INK})]],
              size=14.5, color=BODY)
     # top: plastic-strain cutaway sequence (full width)
     pw_ = Inches(9.6)
@@ -807,15 +807,19 @@ def s14_taylor():
     # bottom right: temper story
     bx = MARGIN + fw2 + Inches(0.5)
     bw = CONTENT_W - fw2 - Inches(0.5)
-    add_bullets(s, bx, fy2 + Inches(0.25), bw, fh2 - Inches(0.2), [
-        [("Same mesh, BCs, integrator — the copper temper is swapped by ", {}),
-         ("changing only NEML2 material parameters", {"bold": True})],
+    add_bullets(s, bx, fy2 + Inches(0.1), bw, fh2 + Inches(0.1), [
+        [("Same mesh, BCs, integrator — the temper is swapped by ", {}),
+         ("one NEML2 parameter", {"bold": True}),
+         (": the prior cold work (initial plastic strain)", {})],
         [("Full-hard ", {}),
-         ("51%", {"bold": True, "color": RED}),
+         ("39%", {"bold": True, "color": RED}),
          (" vs annealed ", {}),
-         ("58%", {"bold": True, "color": BLUE}),
+         ("43%", {"bold": True, "color": BLUE}),
          (" axial shortening — temper sensitivity captured", {})],
-    ], size=13.5, gap=12)
+        [("3-D full-hard shortening matches the calibrated axisymmetric model (", {}),
+         ("39.5%", {"bold": True, "color": INK}),
+         (") — cross-dimensional consistency", {})],
+    ], size=13.5, gap=10)
 
 
 # ================================================================ 17 RESULTS: THERMAL
@@ -833,7 +837,7 @@ def s15_thermal():
     py_ = BODY_TOP + Inches(0.44)
     s.shapes.add_picture(str(FIGS / "fig_thermal.png"), MARGIN + Inches(1.3), py_, pw_, ph_)
     add_text(s, MARGIN + Inches(1.4), py_ + ph_ + Inches(0.03), Inches(11), Inches(0.28),
-             "temperature rise above 300 K, cutaway views — run to 114 µs, >99% of the impact kinetic energy dissipated",
+             "temperature rise above 300 K, cutaway views — run to rebound at 96 µs, >99% of the impact kinetic energy dissipated",
              size=11, color=MUTED, italic=True)
     # bottom: three fact cards
     cy = py_ + ph_ + Inches(0.38)
@@ -841,7 +845,7 @@ def s15_thermal():
         ("Feeds back into the flow stress",
          "the hot foot softens (Johnson–Cook Θ = 1 − T*ᵐ) and flows more easily", RED),
         ("Adiabatic by physics, not assumption",
-         "diffusion length √(αt) ≈ 0.1 mm ≪ element size over the 114 µs run — no heat-conduction PDE needed", BLUE),
+         "diffusion length √(αt) ≈ 0.1 mm ≪ element size over the ~100 µs run — no heat-conduction PDE needed", BLUE),
         ("Three extra NEML2 model blocks",
          "no new MOOSE modules, no new transfers — temperature state lives on the device like everything else", GREEN),
     ]
@@ -855,7 +859,7 @@ def s15_thermal():
         add_text(s, cx + Inches(0.24), cy + Inches(0.43), cw - Inches(0.44), Inches(0.6),
                  d, size=10, color=BODY, leading=1.06)
     takeaway(s, [("The abstract’s thermo-mechanical claim, delivered:", {"bold": True, "color": INK}),
-                 (" a peak ΔT of 119 K at the mushroom foot, captured through the NEML2 force path.", {})])
+                 (" a peak ΔT of 422 K in the localized foot, captured through the NEML2 force path.", {})])
 
 
 # ================================================================ 18 CALIBRATION

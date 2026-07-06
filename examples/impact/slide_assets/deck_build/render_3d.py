@@ -205,8 +205,8 @@ def render_solid(gr, color, camera, px=900):
 
 
 def profile_figure():
-    fh = load(os.path.join(IMPACT, "3d_slug_mesh_fullhard.e"))
-    an = load(os.path.join(IMPACT, "3d_slug_mesh_annealed_exodus.e"))
+    fh = load(os.path.join(IMPACT, "3d_mult_ri_fullhard.e"))
+    an = load(os.path.join(IMPACT, "3d_mult_ri_annealed.e"))
     kfh, kan = len(fh["t"]) - 1, len(an["t"]) - 1
     sh_fh = abs(fh["dy"][kfh].min()) / (fh["y"].max() - fh["y"].min()) * 100
     sh_an = abs(an["dy"][kan].min()) / (an["y"].max() - an["y"].min()) * 100
@@ -350,10 +350,10 @@ if __name__ == "__main__":
     which = sys.argv[1] if len(sys.argv) > 1 else "all"
     src = sys.argv[2] if len(sys.argv) > 2 else "3d_slug_thermal_out.e"
     if which in ("all", "pstrain"):
-        sequence_figure(src, "state/ep", "viridis", "effective plastic strain",
+        sequence_figure(src, "ep", "viridis", "effective plastic strain",
                         "fig_pstrain.png", "{:.2f}")
     if which in ("all", "thermal"):
-        sequence_figure(src, "state/dT", _truncated("inferno", 0.05, 0.92), "temperature rise ΔT (K)",
+        sequence_figure(src, "dT", _truncated("inferno", 0.05, 0.92), "temperature rise ΔT (K)",
                         "fig_thermal.png", "{:.0f} K")
     if which in ("all", "profile"):
         profile_figure()
