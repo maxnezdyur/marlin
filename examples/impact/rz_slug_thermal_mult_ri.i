@@ -86,6 +86,7 @@ ny = 80
     component = 1
     penalty = 1e9
     wall_position = 0
+    boundary = bottom
   []
   [anvil_friction]
     type = RigidWallCoulombFrictionNodalKernel
@@ -96,6 +97,7 @@ ny = 80
     mu = 0.2 # calibrated to the CuH04 foot shape
     wall_position = 0
     regularization_velocity = 1
+    boundary = bottom
   []
 []
 [BCs]

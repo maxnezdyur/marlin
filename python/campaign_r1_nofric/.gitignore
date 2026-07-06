@@ -2,4 +2,5 @@
 !.gitignore
 !run_doe.py
 !fit_g2.py
+!plot_final.py
 !g2_median.json

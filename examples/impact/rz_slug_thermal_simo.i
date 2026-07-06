@@ -82,6 +82,16 @@ heat = 2.6090e-7
     penalty = 1e9
     wall_position = 0
   []
+  [anvil_friction]
+    type = RigidWallCoulombFrictionNodalKernel
+    variable = disp_x
+    normal_variable = disp_y
+    normal_component = 1
+    penalty = 1e9
+    mu = 0.1
+    wall_position = 0
+    regularization_velocity = 1
+  []
 []
 [BCs]
   [axis]
