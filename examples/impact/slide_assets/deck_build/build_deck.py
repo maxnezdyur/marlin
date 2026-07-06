@@ -866,32 +866,33 @@ def s18_calibration():
              [[("Laser-scanned recovered specimen (OFHC copper, 235.9 m/s) → axis-corrected profile target → ", {}),
                ("Bayesian calibration of the Johnson–Cook parameters", {"bold": True, "color": INK})]],
              size=14.5, color=BODY)
-    # figure: silhouette + residuals
-    fw = Inches(8.6)
-    fh = Inches(8.6 / fig_aspect("fig_calibration.png"))
-    fy = BODY_TOP + Inches(0.42)
-    s.shapes.add_picture(str(FIGS / "fig_calibration.png"), MARGIN + Inches(1.1), fy, fw, fh)
-    add_text(s, MARGIN + Inches(1.2), fy + fh + Inches(0.0), Inches(11), Inches(0.24),
-             "scan silhouette vs simulated final profiles (left); residuals vs scan noise band (right) — RZ production model",
-             size=10, color=MUTED, italic=True)
-    # RMS ladder
-    cy = fy + fh + Inches(0.28)
+    # figure: scan silhouette vs the calibrated run
+    fw = Inches(7.6)
+    fh = Inches(7.6 / fig_aspect("fig_calibration.png"))
+    fy = BODY_TOP + Inches(0.55)
+    s.shapes.add_picture(str(FIGS / "fig_calibration.png"), MARGIN + Inches(0.1), fy, fw, fh)
+    add_text(s, MARGIN + Inches(0.2), fy + fh + Inches(0.06), fw, Inches(0.24),
+             "final deformed profile, RZ production model at the calibrated posterior median",
+             size=10.5, color=MUTED, italic=True)
+    # RMS ladder (vertical, right)
+    px = MARGIN + fw + Inches(0.6)
+    pw = CONTENT_W - fw - Inches(0.6)
     steps = [("hand-tuned", "159 µm", MUTED),
              ("Bayesian posterior median", "81 µm", BLUE),
              ("+ frictionless anvil", "69 µm", GREEN)]
-    cw = (CONTENT_W - Inches(2.2)) / 3
-    cx = MARGIN
+    cy = fy + Inches(0.05)
     for i, (lab, val, c) in enumerate(steps):
-        add_card(s, cx, cy, cw, Inches(0.78), fill=WHITE, line=CARD_LN, line_w=0.75)
-        add_text(s, cx + Inches(0.2), cy + Inches(0.06), cw - Inches(0.4), Inches(0.4),
-                 [[(val, {"bold": True, "color": c, "size": 21}),
-                   ("  profile RMS", {"size": 10.5, "color": MUTED})]], size=21)
-        add_text(s, cx + Inches(0.2), cy + Inches(0.47), cw - Inches(0.4), Inches(0.26),
+        add_card(s, px, cy, pw, Inches(0.86), fill=WHITE, line=CARD_LN, line_w=0.75)
+        add_rect(s, px, cy + Inches(0.1), Inches(0.055), Inches(0.66), c)
+        add_text(s, px + Inches(0.26), cy + Inches(0.08), pw - Inches(0.5), Inches(0.42),
+                 [[(val, {"bold": True, "color": c, "size": 22}),
+                   ("  profile RMS", {"size": 10.5, "color": MUTED})]], size=22)
+        add_text(s, px + Inches(0.26), cy + Inches(0.52), pw - Inches(0.5), Inches(0.26),
                  lab, size=10.5, color=BODY)
         if i < 2:
-            add_arrow(s, cx + cw + Inches(0.12), cy + Inches(0.39),
-                      cx + cw + Inches(0.98), cy + Inches(0.39), color=INK, weight=1.75)
-        cx += cw + Inches(1.1)
+            add_arrow(s, px + pw / 2, cy + Inches(0.88), px + pw / 2, cy + Inches(1.16),
+                      color=INK, weight=1.75)
+        cy += Inches(1.22)
     takeaway(s, [("96-run Sobol design on the production model → GP emulator → posterior.", {"bold": True, "color": INK}),
                  (" The data rejects anvil friction, and one shot cannot separate A–B–n–C — multi-velocity shots are next.", {})])
 
