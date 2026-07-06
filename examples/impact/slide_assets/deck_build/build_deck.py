@@ -858,8 +858,6 @@ def s15_thermal():
                  t, size=12, color=INK, bold=True, leading=1.02)
         add_text(s, cx + Inches(0.24), cy + Inches(0.43), cw - Inches(0.44), Inches(0.6),
                  d, size=10, color=BODY, leading=1.06)
-    takeaway(s, [("The abstract’s thermo-mechanical claim, delivered:", {"bold": True, "color": INK}),
-                 (" a peak ΔT of 422 K in the localized foot, captured through the NEML2 force path.", {})])
 
 
 # ================================================================ 18 CALIBRATION
