@@ -32,7 +32,7 @@ def fig_aspect(name):
         return im.size[0] / im.size[1]
 
 
-TOTAL = 20
+TOTAL = 19
 BODY_TOP = Inches(1.32)
 CONTENT_W = PAGE_W - 2 * MARGIN
 MONO = "Consolas"
@@ -222,12 +222,6 @@ def s05_kinematics():
         add_text(s, label_x, y - Inches(0.02), label_w, Inches(0.7),
                  caption, size=11.5, color=BODY, italic=True)
         y += Inches(0.88)
-    takeaway(s, [("Each quantity lives on the right domain:", {"bold": True, "color": INK}),
-                 (" S on the relaxed intermediate configuration, P on the reference, matching the Ω", {}),
-                 ("0", {"sub": True}),
-                 (" integrals of the weak form. Elastic strain stays ~10⁻³, so the St. Venant–Kirchhoff law is safe under severe compression.", {})])
-
-
 # ================================================================ 6 CONSTITUTIVE: JC FLOW
 def s06_jc():
     s = new_slide(prs, "Formulation 3/5", "The material model II: Johnson–Cook flow and adiabatic heating",
@@ -374,8 +368,7 @@ def s06_stability_cost():
     add_text(s, px + Inches(0.3), y + Inches(0.12), pw - Inches(0.6), Inches(0.35),
              "schematic; plasticity dominates the step cost",
              size=10.5, color=MUTED, italic=True)
-    takeaway(s, [("Explicit runtime  ≈  steps × material-update cost.", {"bold": True, "color": INK}),
-                 (" The step count is physics; the material cost is the target.", {})])
+    takeaway(s, [("Explicit runtime  ≈  steps × material-update cost.", {"bold": True, "color": INK})])
 
 
 # ================================================================ 7 MOOSE
@@ -699,116 +692,13 @@ def s12_summary():
     add_card(s, MARGIN, ny, CONTENT_W, Inches(0.85), fill=BLUE_T, line=BLUE, line_w=1.0)
     add_text(s, MARGIN + Inches(0.3), ny, CONTENT_W - Inches(0.6), Inches(0.85),
              [[("Up next:  ", {"bold": True, "color": BLUE}),
-               ("verification across formulations  ·  reduced integration  ·  Taylor impact & thermo-mechanics  ·  calibration against a scanned specimen", {"color": INK})]],
+               ("Taylor impact and coupled thermo-mechanics  ·  calibration against a scanned specimen", {"color": INK})]],
              size=15, anchor=MSO_ANCHOR.MIDDLE)
-
-
-# ================================================================ 14 REDUCED INTEGRATION
-def s14_reduced():
-    s = new_slide(prs, None, "Reduced integration: one point per element, stabilized",
-                  number=15, total=TOTAL)
-    lw = Inches(7.3)
-    add_bullets(s, MARGIN, BODY_TOP + Inches(0.15), lw, Inches(4.3), [
-        [("Full integration ", {}),
-         ("locks volumetrically", {"bold": True}),
-         (" under large plastic flow. The batched ", {}),
-         ("F-bar", {"bold": True}),
-         (" correction fixes it (verified to machine precision)", {})],
-        [("The production choice instead: ", {}),
-         ("one-point quadrature", {"bold": True, "color": INK}),
-         (", locking-free by construction and much cheaper per step", {})],
-        [("Underintegration admits ", {}),
-         ("hourglass modes", {"bold": True}),
-         (" → stabilized by a batched Flanagan–Belytschko correction (QUAD4 + HEX8): "
-          "remove the least-squares affine part of the element displacement, penalize the rest", {})],
-        [("Penalty scale  c = 0.05 · μ · V/h²  uses the ", {}),
-         ("physical shear modulus", {"bold": True}),
-         (", the classic coefficient, not a tunable", {})],
-    ], size=15, gap=15)
-    # right: stat cards
-    px = MARGIN + lw + Inches(0.5)
-    pw = CONTENT_W - lw - Inches(0.5)
-    add_card(s, px, BODY_TOP, pw, Inches(2.0), fill=WHITE, line=CARD_LN, line_w=1.0)
-    add_rect(s, px, BODY_TOP + Inches(0.15), Inches(0.06), Inches(1.7), BLUE)
-    add_text(s, px + Inches(0.35), BODY_TOP + Inches(0.22), pw - Inches(0.6), Inches(1.0),
-             [[("2.6×", {"bold": True, "color": BLUE})]], size=52)
-    add_text(s, px + Inches(0.37), BODY_TOP + Inches(1.3), pw - Inches(0.65), Inches(0.6),
-             "faster per explicit step than full integration, same mesh",
-             size=12.5, color=BODY, leading=1.12)
-    ny = BODY_TOP + Inches(2.3)
-    add_card(s, px, ny, pw, Inches(2.05), fill=GREEN_T, line=GREEN, line_w=1.0)
-    add_text(s, px + Inches(0.26), ny + Inches(0.18), pw - Inches(0.52), Inches(0.3),
-             "NOT A TUNING KNOB", size=11, color=GREEN, bold=True)
-    add_text(s, px + Inches(0.28), ny + Inches(0.55), pw - Inches(0.56), Inches(1.4),
-             [[("Final profiles insensitive to the hourglass penalty over a ", {}),
-               ("4× range", {"bold": True, "color": INK}),
-               (". The physics does not hide in the stabilization.", {})]],
-             size=13, color=BODY, leading=1.15)
-    takeaway(s, [("Every production run in the rest of this talk uses reduced integration + batched hourglass control.",
-                  {"bold": True, "color": INK})])
-
-
-# ================================================================ 15 PERFORMANCE ANATOMY
-def s15_perf():
-    s = new_slide(prs, None, "After the first step, the element loop is empty",
-                  number=16, total=TOTAL)
-    lw = Inches(6.6)
-    add_text(s, MARGIN, BODY_TOP, lw, Inches(0.35),
-             [[("Instrumented the FE element loop of the production RZ impact run:", {})]],
-             size=14.5, color=BODY)
-    # visit counter card
-    vy = BODY_TOP + Inches(0.5)
-    add_card(s, MARGIN, vy, lw, Inches(1.85), fill=WHITE, line=CARD_LN, line_w=1.0)
-    add_text(s, MARGIN + Inches(0.26), vy + Inches(0.16), lw - Inches(0.5), Inches(0.3),
-             "VOLUME ELEMENTS VISITED PER RESIDUAL EVALUATION", size=10.5, color=MUTED, bold=True)
-    add_text(s, MARGIN + Inches(0.35), vy + Inches(0.55), lw - Inches(0.6), Inches(1.1),
-             [[("step 0:   ", {"font": MONO, "size": 15}),
-               ("640", {"font": MONO, "bold": True, "size": 15, "color": BLUE}),
-               ("   (builds the device caches: φ, ∇φ, DOF maps, weights)", {"size": 11.5, "color": MUTED})],
-              [("step 1:   ", {"font": MONO, "size": 15}),
-               ("0", {"font": MONO, "bold": True, "size": 15, "color": GREEN})],
-              [("step n:   ", {"font": MONO, "size": 15}),
-               ("0", {"font": MONO, "bold": True, "size": 15, "color": GREEN}),
-               ("   for the rest of the run", {"size": 11.5, "color": MUTED})]],
-             size=13, color=INK, leading=1.35)
-    add_bullets(s, MARGIN, vy + Inches(2.1), lw, Inches(1.7), [
-        [("The integrator installs a ", {}),
-         ("shrunken algebraic range", {"bold": True}),
-         (": only elements adjacent to integrated BCs (none, with node-wise contact)", {})],
-        [("Contact runs on the ", {}),
-         ("9 impact-face nodes", {"bold": True}),
-         (" only (boundary-restricted nodal kernels)", {})],
-    ], size=13.5, gap=10)
-    # right: measured per-step anatomy
-    px = MARGIN + lw + Inches(0.5)
-    pw = CONTENT_W - lw - Inches(0.5)
-    py = BODY_TOP
-    add_card(s, px, py, pw, Inches(4.35))
-    add_text(s, px + Inches(0.26), py + Inches(0.2), pw - Inches(0.52), Inches(0.3),
-             "MEASURED: ONE EXPLICIT STEP (53 ms, serial CPU)", size=10.5, color=MUTED, bold=True)
-    bar_x = px + Inches(0.3)
-    y = py + Inches(0.62)
-    segs = [("batched NEML2 constitutive call", "71%", RED, RED_T, 1.9),
-            ("integrator, aux, output", "27%", MUTED, WHITE, 0.75),
-            ("contact + residual loops", "2%", BLUE, BLUE_T, 0.28)]
-    for name, tag, ln, fl, h_in in segs:
-        h = Inches(h_in)
-        add_rect(s, bar_x, y, Inches(0.5), h, fl, line=ln, line_w=1.0)
-        add_text(s, bar_x + Inches(0.7), y + h / 2 - Inches(0.18), pw - Inches(1.3), Inches(0.4),
-                 [[(name, {"bold": h_in > 1}),
-                   ("   " + tag, {"color": ln, "size": 11, "bold": True})]],
-                 size=12.5, color=INK if h_in > 1 else BODY)
-        y += h + Inches(0.14)
-    add_text(s, px + Inches(0.3), y + Inches(0.1), pw - Inches(0.6), Inches(0.6),
-             "2,000-step production benchmark; geometry caches never rebuilt (0.000 s total)",
-             size=10.5, color=MUTED, italic=True, leading=1.1)
-    takeaway(s, [("Per-step cost ≈ one batched constitutive call.", {"bold": True, "color": INK}),
-                 (" Everything around it is negligible.", {})])
 
 
 # ================================================================ 16 RESULTS: TAYLOR IMPACT
 def s14_taylor():
-    s = new_slide(prs, None, "3-D Taylor anvil impact, end to end", number=17, total=TOTAL)
+    s = new_slide(prs, None, "3-D Taylor anvil impact, end to end", number=15, total=TOTAL)
     add_text(s, MARGIN, BODY_TOP - Inches(0.08), CONTENT_W, Inches(0.35),
              [[("OFHC copper slug at ", {}),
                ("235.9 m/s", {"bold": True, "color": INK}),
@@ -849,7 +739,7 @@ def s14_taylor():
 # ================================================================ 17 RESULTS: THERMAL
 def s15_thermal():
     s = new_slide(prs, None, "Coupled thermo-mechanics: heating from plastic work",
-                  number=18, total=TOTAL)
+                  number=16, total=TOTAL)
     add_text(s, MARGIN, BODY_TOP - Inches(0.08), CONTENT_W, Inches(0.35),
              [[("The run you just saw is coupled. Temperature is integrated ", {}),
                ("inside the NEML2 model", {"bold": True, "color": INK}),
@@ -884,10 +774,58 @@ def s15_thermal():
                  d, size=10, color=BODY, leading=1.06)
 
 
+# ================================================================ 17 BAYESIAN METHOD
+def s17_bayes():
+    s = new_slide(prs, None, "Bayesian calibration of the material parameters",
+                  number=17, total=TOTAL)
+    add_text(s, MARGIN, BODY_TOP - Inches(0.08), CONTENT_W, Inches(0.35),
+             [[("Unknowns: ", {}),
+               ("θ = (A, B, n, C, ε₀ᵖ)", {"bold": True, "color": INK}),
+               (" plus a model-discrepancy scale σ", {}),
+               ("d", {"sub": True}),
+               (". The forward model in the loop is the production simulation itself.", {})]],
+             size=14.5, color=BODY)
+    # pipeline
+    stages = [
+        ("Priors", "A, B lognormal. n, C, ε₀ᵖ uniform. discrepancy scale half-normal."),
+        ("96-run Sobol design", "one production RZ simulation per point (~21 min each)"),
+        ("Gaussian-process emulator", "PCA of the outer profile, one GP per mode. Cross-validated to 0.03 mm."),
+        ("MCMC posterior", "emcee over parameters and discrepancy. The posterior median is re-run through the true model."),
+    ]
+    n = len(stages)
+    gap = Inches(0.45)
+    cw = (CONTENT_W - (n - 1) * gap) / n
+    ch = Inches(1.7)
+    cy = BODY_TOP + Inches(0.55)
+    cx = MARGIN
+    for i, (t, d) in enumerate(stages):
+        add_card(s, cx, cy, cw, ch, fill=WHITE, line=CARD_LN, line_w=1.0)
+        add_rect(s, cx, cy + Inches(0.12), Inches(0.055), ch - Inches(0.24), BLUE)
+        add_text(s, cx + Inches(0.22), cy + Inches(0.14), cw - Inches(0.4), Inches(0.55),
+                 t, size=13.5, color=INK, bold=True, leading=1.02)
+        add_text(s, cx + Inches(0.22), cy + Inches(0.62), cw - Inches(0.4), Inches(1.0),
+                 d, size=11, color=BODY, leading=1.12)
+        if i < n - 1:
+            add_arrow(s, cx + cw + Inches(0.04), cy + ch / 2,
+                      cx + cw + gap - Inches(0.04), cy + ch / 2, color=BLUE, weight=1.75)
+        cx += cw + gap
+    # posterior + likelihood
+    ey = cy + ch + Inches(0.5)
+    add_eq(s, r"$\pi(\theta, \sigma_d \mid \mathrm{scan}) \;\propto\; \mathcal{L}(\mathrm{scan} \mid \theta, \sigma_d)\; \pi(\theta)\, \pi(\sigma_d)$",
+           MARGIN + Inches(0.1), ey, scale=1.85, name="bayes_posterior")
+    add_text(s, MARGIN + Inches(7.6), ey + Inches(0.04), CONTENT_W - Inches(7.6), Inches(0.6),
+             "posterior over parameters and discrepancy", size=11.5, color=MUTED, italic=True)
+    add_eq(s, r"$\mathcal{L}: \;\; r(z_i) \sim \mathcal{N}\big(r_{\mathrm{GP}}(z_i;\theta),\; \sigma_{\mathrm{scan}}^2 + \sigma_{\mathrm{GP}}^2 + \sigma_d^2\big)$",
+           MARGIN + Inches(0.1), ey + Inches(0.95), scale=1.85, name="bayes_likelihood")
+    add_text(s, MARGIN + Inches(7.6), ey + Inches(0.99), CONTENT_W - Inches(7.6), Inches(0.7),
+             "Gaussian over ~40 profile stations, final length, and foot radius",
+             size=11.5, color=MUTED, italic=True)
+
+
 # ================================================================ 18 CALIBRATION
 def s18_calibration():
     s = new_slide(prs, None, "Validation: calibrated against a scanned specimen",
-                  number=19, total=TOTAL)
+                  number=18, total=TOTAL)
     add_text(s, MARGIN, BODY_TOP - Inches(0.08), CONTENT_W, Inches(0.35),
              [[("Laser-scanned recovered specimen (OFHC copper, 235.9 m/s) → axis-corrected profile target → ", {}),
                ("Bayesian calibration of the Johnson–Cook parameters", {"bold": True, "color": INK})]],
@@ -903,8 +841,7 @@ def s18_calibration():
     # RMS ladder (vertical, right)
     px = MARGIN + fw + Inches(0.6)
     pw = CONTENT_W - fw - Inches(0.6)
-    steps = [("hand-tuned", "159 µm", MUTED),
-             ("Bayesian posterior median", "81 µm", BLUE),
+    steps = [("Bayesian posterior median", "81 µm", BLUE),
              ("+ frictionless anvil", "69 µm", GREEN)]
     cy = fy + Inches(0.05)
     for i, (lab, val, c) in enumerate(steps):
@@ -915,17 +852,15 @@ def s18_calibration():
                    ("  profile RMS", {"size": 10.5, "color": MUTED})]], size=22)
         add_text(s, px + Inches(0.26), cy + Inches(0.52), pw - Inches(0.5), Inches(0.26),
                  lab, size=10.5, color=BODY)
-        if i < 2:
+        if i < len(steps) - 1:
             add_arrow(s, px + pw / 2, cy + Inches(0.88), px + pw / 2, cy + Inches(1.16),
                       color=INK, weight=1.75)
         cy += Inches(1.22)
-    takeaway(s, [("96-run Sobol design on the production model → GP emulator → posterior.", {"bold": True, "color": INK}),
-                 (" The data rejects anvil friction, and one shot cannot separate A–B–n–C. Multi-velocity shots are next.", {})])
 
 
 # ================================================================ 19 CONCLUSIONS
 def s19_conclusions():
-    s = new_slide(prs, None, "Takeaways", number=20, total=TOTAL)
+    s = new_slide(prs, None, "Takeaways", number=19, total=TOTAL)
     rows = [
         ("NEML2 assembles the internal nodal forces inside MOOSE explicit dynamics",
          "batched, device-resident; state advances in place; one upload + one download per step", BLUE),
@@ -970,10 +905,9 @@ def build():
     s10_force_path()
     s11_state()
     s12_summary()
-    s14_reduced()
-    s15_perf()
     s14_taylor()
     s15_thermal()
+    s17_bayes()
     s18_calibration()
     s19_conclusions()
     prs.save(OUT)
