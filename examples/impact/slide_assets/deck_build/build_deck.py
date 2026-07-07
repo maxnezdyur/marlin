@@ -264,8 +264,6 @@ def s06_jc():
         add_text(s, px + Inches(1.45), ry, pw - Inches(1.7), Inches(0.3),
                  [[(v, {"color": GREEN if cal else BODY, "bold": cal})]], size=12)
         ry += Inches(0.4)
-    add_line(s, px + Inches(0.24), BODY_TOP + Inches(1.78), px + pw - Inches(0.24),
-             BODY_TOP + Inches(1.78), color=CARD_LN, weight=0.75)
     add_text(s, px + Inches(0.26), ry + Inches(0.04), pw - Inches(0.5), Inches(0.55),
              [[("green = Bayesian-calibrated against the recovered specimen (later in this talk)",
                 {"color": GREEN, "italic": True})]], size=10.5, leading=1.1)
