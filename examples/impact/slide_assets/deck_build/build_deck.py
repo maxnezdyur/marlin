@@ -87,10 +87,10 @@ def s02_motivation():
          ("impact and other high-rate loads", {"bold": True})],
         [("These events are ", {}),
          ("wave-dominated and fast", {"bold": True}),
-         (": stress waves traverse the part in microseconds, with severe, localized plasticity", {})],
+         (". Stress waves traverse the part in microseconds, with severe, localized plasticity", {})],
         [("Predictive fidelity requires ", {}),
          ("modern constitutive models", {"bold": True}),
-         (": rate- and temperature-dependent plasticity, evolving internal state", {})],
+         (". Rate- and temperature-dependent, with evolving internal state", {})],
         [("Simulating them means ", {}),
          ("explicit time integration", {"bold": True}),
          (" with a material-model evaluation at every quadrature point, every step", {})],
@@ -149,8 +149,8 @@ def s03_gap():
         [("Batched tensor evaluation on ", {}),
          ("GPU or CPU", {"bold": True}),
          (" (libTorch backend)", {})],
-        [("But: no mesh, no boundary conditions, no solver; ", {}),
-         ("not a simulation code", {"bold": True})],
+        [("But: no mesh, no boundary conditions, no solver. ", {}),
+         ("Not a simulation code", {"bold": True})],
     ], size=14, gap=9, bullet_color=GREEN)
     # the gap between
     gx = MARGIN + col_w
@@ -179,7 +179,7 @@ def s04_governing():
         (r"$\rho_0\,\ddot{\mathbf{u}} \;=\; \nabla_{\!0}\!\cdot\!\mathbf{P} + \rho_0\,\mathbf{b} \quad \text{in } \Omega_0$",
          "balance of linear momentum on the reference domain", 1.85, "momentum_strong_form_tl"),
         (r"$\int_{\Omega_0}\rho_0\,\mathbf{w}\!\cdot\!\ddot{\mathbf{u}}\;dV \;+\; \int_{\Omega_0}\nabla_{\!0}\mathbf{w}:\mathbf{P}\;dV \;=\; \int_{\Gamma_{0,t}}\mathbf{w}\!\cdot\!\bar{\mathbf{t}}_0\;dA \;+\; \int_{\Omega_0}\rho_0\,\mathbf{w}\!\cdot\!\mathbf{b}\;dV$",
-         "total-Lagrangian weak form: every integral on the reference configuration", 1.85, "weak_form_tl"),
+         "total-Lagrangian weak form. Every integral is on the reference configuration", 1.85, "weak_form_tl"),
         (r"$\mathbf{M}\,\ddot{\mathbf{u}} \;=\; \mathbf{F}^{\mathrm{ext}} \;-\; \mathbf{F}^{\mathrm{int}}(\mathbf{P})$",
          "discretize in space: semi-discrete momentum equation", 1.85, "semi_discrete_momentum_tl"),
         (r"$\mathbf{F}^{\mathrm{int}} \;=\; \mathop{\mathrm{A}}_{e}\int_{\Omega_{0,e}}\mathbf{B}^{\!\top}\mathbf{P}\;dV, \qquad \mathbf{P} = \text{constitutive model}(\mathbf{F},\ \text{state})$",
@@ -214,7 +214,7 @@ def s05_kinematics():
         (r"$\mathbf{F}^{p}_{n+1} \;=\; \big(\mathbf{I} + \Delta\varepsilon^{p}\,\mathbf{N}\big)\,\mathbf{F}^{p}_{n}$",
          "linearized exponential-map plastic update", "fp_update"),
         (r"$\mathbf{P} \;=\; \mathbf{F}\;\big(\mathbf{F}^{p-1}\,\mathbf{S}\,\mathbf{F}^{p-\top}\big)$",
-         "pull-back to the reference configuration: the PK1 stress of the weak form", "pk1_pullback"),
+         "pull-back to the reference configuration, giving the PK1 stress of the weak form", "pk1_pullback"),
     ]
     y = BODY_TOP + Inches(0.08)
     for latex, caption, eqname in rows:
@@ -344,7 +344,7 @@ def s06_stability_cost():
         [("Millimeter elements: ", {}),
          ("Δt ≈ 10 ns", {"bold": True}),
          ("  ⇒  ", {})] + pow10(4, 5) + [(" steps for a 100 µs event", {})],
-        [("Each step: no solve; the runtime ", {}),
+        [("Each step needs no solve. The runtime ", {}),
          ("is", {"italic": True}),
          (" the residual, and the residual ", {}),
          ("is", {"italic": True}),
@@ -383,8 +383,8 @@ def s07_moose():
     s = new_slide(prs, "Building blocks", "MOOSE: the multiphysics host",
                   number=9, total=TOTAL)
     add_text(s, MARGIN, BODY_TOP, CONTENT_W, Inches(0.35),
-             [[("Open-source multiphysics FE framework (Idaho National Laboratory): ", {}),
-               ("we keep all of this for free", {"bold": True, "color": INK})]],
+             [[("Open-source multiphysics FE framework (Idaho National Laboratory). ", {}),
+               ("We keep all of this for free", {"bold": True, "color": INK})]],
              size=15.5, color=BODY)
     cards = [
         ("Boundary conditions", "full BC library, incl. the penalty and pressure BCs used in this work"),
@@ -415,7 +415,7 @@ def s08_neml2():
     s = new_slide(prs, "Building blocks", "NEML2: the material engine",
                   number=10, total=TOTAL)
     add_text(s, MARGIN, BODY_TOP, CONTENT_W, Inches(0.35),
-             [[("New Engineering Material model Library v2 (ANL, open source): constitutive models as ", {}),
+             [[("New Engineering Material model Library v2 (ANL, open source). Constitutive models as ", {}),
                ("composable tensor programs", {"bold": True, "color": INK})]],
              size=15.5, color=BODY)
     # left: composition diagram
@@ -470,7 +470,7 @@ def s08_neml2():
              "GPUs want exactly this shape of work: wide, uniform, no per-point branching",
              size=11.5, color=BODY, italic=True, leading=1.1)
     takeaway(s, [("NEML2 evaluates material models as batched tensor programs.", {"bold": True, "color": INK}),
-                 (" It has no mesh, boundary conditions, or assembly; MOOSE does.", {})])
+                 (" It has no mesh, boundary conditions, or assembly. MOOSE does.", {})])
 
 
 # ================================================================ 9 WHAT WE DID
@@ -485,8 +485,8 @@ def s09_contribution():
             [("Explicit central-difference integrator with ", {}),
              ("mixed-order multiphysics", {"bold": True}),
              (" (2nd-order mechanics + 1st-order fields)", {})],
-            [("Lumped mass via matrix tag: ", {}),
-             ("zero linear iterations per step", {"bold": True})],
+            [("Lumped mass via matrix tag. ", {}),
+             ("Zero linear iterations per step", {"bold": True})],
             [("Variable step size (Abaqus-style midpoint velocity averaging)", {})],
             [("Upstreamed to MOOSE ", {}),
              ("solid_mechanics", {"font": MONO, "size": 12.5})],
@@ -498,7 +498,7 @@ def s09_contribution():
             [("Constitutive state lives on the device and ", {}),
              ("advances in place", {"bold": True}),
              (" between steps", {})],
-            [("Plugs into the explicit solve as a residual contribution; MOOSE BCs, outputs, MPI unchanged", {})],
+            [("Plugs into the explicit solve as a residual contribution. MOOSE BCs, outputs, and MPI are unchanged", {})],
         ]),
     ]):
         cx = MARGIN + i * (cw + col_gap)
@@ -536,7 +536,7 @@ def s10_force_path():
     dev_h = stage_h + Inches(1.56)
     add_card(s, dev_x, dev_y, dev_w, dev_h, fill=GREEN_T, line=GREEN, line_w=1.0)
     add_text(s, dev_x + Inches(0.2), dev_y + Inches(0.1), dev_w - Inches(0.4), Inches(0.28),
-             "DEVICE (libTorch): same code on CPU / CUDA", size=10.5, color=GREEN, bold=True)
+             "DEVICE (libTorch) · same code on CPU / CUDA", size=10.5, color=GREEN, bold=True)
     # endpoints (host)
     ey = top
     h1 = add_card(s, MARGIN, ey, end_w, stage_h, fill=WHITE, line=CARD_LN, line_w=1.0)
@@ -595,7 +595,7 @@ def s10_force_path():
     add_card(s, dev_x + Inches(0.3), ny, dev_w - Inches(0.6), Inches(0.64), fill=WHITE, line=GREEN, line_w=0.75)
     add_text(s, dev_x + Inches(0.5), ny, dev_w - Inches(1.0), Inches(0.64),
              [[("built once, cached on device:  ", {"bold": True, "size": 10.5, "color": GREEN}),
-               ("shape functions φ, ∇φ,  DOF maps,  weights JxW; rebuilt only on mesh change", {"size": 10.5})]],
+               ("shape functions φ, ∇φ,  DOF maps,  weights JxW. Rebuilt only on mesh change", {"size": 10.5})]],
              size=10.5, color=BODY, anchor=MSO_ANCHOR.MIDDLE)
     takeaway(s, [("The interior force computation never touches an element loop:", {"bold": True, "color": INK}),
                  (" a short sequence of batched tensor ops.", {})])
@@ -612,7 +612,7 @@ def s11_state():
     y1 = BODY_TOP + Inches(0.05)
     add_card(s, MARGIN, y1, CONTENT_W, half_h, fill=RED_T, line=RED, line_w=1.0)
     add_text(s, MARGIN + Inches(0.26), y1 + Inches(0.12), Inches(8), Inches(0.3),
-             "CONVENTIONAL COUPLING: state round-trips through MOOSE every step",
+             "CONVENTIONAL COUPLING · state round-trips through MOOSE every step",
              size=11, color=RED, bold=True)
     # lanes
     lane_x = MARGIN + Inches(0.3)
@@ -637,13 +637,13 @@ def s11_state():
     add_arrow(s, bx + Inches(5.1), dev_y1 - Inches(0.08), bx + Inches(5.6), host_y1 + Inches(0.44),
               color=RED, weight=1.5)
     add_text(s, bx + Inches(7.35), y1 + Inches(0.62), Inches(2.8), Inches(1.1),
-             "state copied down and back up every step; scales with model complexity",
+             "state copied down and back up every step. Traffic scales with model complexity",
              size=10.5, color=RED, italic=True, leading=1.1)
     # ---- this-work half
     y2 = y1 + half_h + gap
     add_card(s, MARGIN, y2, CONTENT_W, half_h, fill=GREEN_T, line=GREEN, line_w=1.0)
     add_text(s, MARGIN + Inches(0.26), y2 + Inches(0.12), Inches(9.5), Inches(0.3),
-             "THIS WORK: state advances in place on the device  (manage_state_advance)",
+             "THIS WORK · state advances in place on the device  (manage_state_advance)",
              size=11, color=GREEN, bold=True)
     host_y2 = y2 + Inches(0.52)
     dev_y2 = y2 + Inches(1.28)
@@ -663,10 +663,10 @@ def s11_state():
     add_arrow(s, bx + Inches(5.2), dev_y2 - Inches(0.08), bx + Inches(5.75), host_y2 + Inches(0.44),
               color=GREEN, weight=1.5)
     add_text(s, bx + Inches(7.35), y2 + Inches(0.62), Inches(2.8), Inches(1.1),
-             "per step: one solution upload, one force download; independent of model complexity",
+             "per step: one solution upload, one force download. Independent of model complexity",
              size=10.5, color=GREEN, italic=True, leading=1.1)
-    takeaway(s, [("State stays where it is computed;", {"bold": True, "color": INK}),
-                 (" transfer volume does not grow with model complexity.", {})])
+    takeaway(s, [("State stays where it is computed.", {"bold": True, "color": INK}),
+                 (" Transfer volume does not grow with model complexity.", {})])
 
 
 # ================================================================ 12 SUMMARY / HANDOFF
@@ -711,7 +711,7 @@ def s14_reduced():
     add_bullets(s, MARGIN, BODY_TOP + Inches(0.15), lw, Inches(4.3), [
         [("Full integration ", {}),
          ("locks volumetrically", {"bold": True}),
-         (" under large plastic flow; the batched ", {}),
+         (" under large plastic flow. The batched ", {}),
          ("F-bar", {"bold": True}),
          (" correction fixes it (verified to machine precision)", {})],
         [("The production choice instead: ", {}),
@@ -821,7 +821,7 @@ def s14_taylor():
     py_ = BODY_TOP + Inches(0.46)
     s.shapes.add_picture(str(FIGS / "fig_pstrain.png"), MARGIN + Inches(0.6), py_, pw_, ph_)
     add_text(s, MARGIN + Inches(0.7), py_ + ph_ + Inches(0.03), Inches(11), Inches(0.28),
-             "cutaway views (near half removed); plastic strain localizes at the impact foot; gray plane = rigid anvil",
+             "cutaway views (near half removed). Plastic strain localizes at the impact foot. The gray plane is the rigid anvil",
              size=11, color=MUTED, italic=True)
     # bottom left: temper comparison renders
     fw2 = Inches(4.3)
@@ -832,7 +832,7 @@ def s14_taylor():
     bx = MARGIN + fw2 + Inches(0.5)
     bw = CONTENT_W - fw2 - Inches(0.5)
     add_bullets(s, bx, fy2 + Inches(0.1), bw, fh2 + Inches(0.1), [
-        [("Same mesh, BCs, integrator; the temper is swapped by ", {}),
+        [("Same mesh, BCs, integrator. The temper is swapped by ", {}),
          ("one NEML2 parameter", {"bold": True}),
          (": the prior cold work (initial plastic strain)", {})],
         [("Full-hard ", {}),
@@ -851,7 +851,7 @@ def s15_thermal():
     s = new_slide(prs, None, "Coupled thermo-mechanics: heating from plastic work",
                   number=18, total=TOTAL)
     add_text(s, MARGIN, BODY_TOP - Inches(0.08), CONTENT_W, Inches(0.35),
-             [[("The run you just saw is coupled: temperature integrated ", {}),
+             [[("The run you just saw is coupled. Temperature is integrated ", {}),
                ("inside the NEML2 model", {"bold": True, "color": INK}),
                (" (adiabatic Taylor–Quinney heating, β = 0.9)", {})]],
              size=14.5, color=BODY)
@@ -861,7 +861,7 @@ def s15_thermal():
     py_ = BODY_TOP + Inches(0.44)
     s.shapes.add_picture(str(FIGS / "fig_thermal.png"), MARGIN + Inches(1.3), py_, pw_, ph_)
     add_text(s, MARGIN + Inches(1.4), py_ + ph_ + Inches(0.03), Inches(11), Inches(0.28),
-             "temperature rise above 300 K, cutaway views; run to rebound at 96 µs; >99% of the impact kinetic energy dissipated",
+             "temperature rise above 300 K, cutaway views. Run to rebound at 96 µs with >99% of the impact kinetic energy dissipated",
              size=11, color=MUTED, italic=True)
     # bottom: three fact cards
     cy = py_ + ph_ + Inches(0.38)
@@ -869,9 +869,9 @@ def s15_thermal():
         ("Feeds back into the flow stress",
          "the hot foot softens (Johnson–Cook Θ = 1 − T*ᵐ) and flows more easily", RED),
         ("Adiabatic by physics, not assumption",
-         "diffusion length √(αt) ≈ 0.1 mm ≪ element size over the ~100 µs run; no heat-conduction PDE needed", BLUE),
+         "diffusion length √(αt) ≈ 0.1 mm ≪ element size over the ~100 µs run. No heat-conduction PDE needed", BLUE),
         ("Three extra NEML2 model blocks",
-         "no new MOOSE modules, no new transfers; temperature state lives on the device like everything else", GREEN),
+         "no new MOOSE modules, no new transfers. Temperature state lives on the device like everything else", GREEN),
     ]
     cw = (CONTENT_W - Inches(0.8)) / 3
     for i, (t, d, c) in enumerate(cards):
@@ -920,7 +920,7 @@ def s18_calibration():
                       color=INK, weight=1.75)
         cy += Inches(1.22)
     takeaway(s, [("96-run Sobol design on the production model → GP emulator → posterior.", {"bold": True, "color": INK}),
-                 (" The data rejects anvil friction, and one shot cannot separate A–B–n–C; multi-velocity shots are next.", {})])
+                 (" The data rejects anvil friction, and one shot cannot separate A–B–n–C. Multi-velocity shots are next.", {})])
 
 
 # ================================================================ 19 CONCLUSIONS
