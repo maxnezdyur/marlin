@@ -260,18 +260,40 @@ def add_line(slide, x1, y1, x2, y2, color=FAINT, weight=0.75, dash=None):
 
 def add_arrow(slide, x1, y1, x2, y2, color=INK, weight=1.5, dash=None,
               head="triangle", tail=None):
-    ln = add_line(slide, x1, y1, x2, y2, color=color, weight=weight, dash=dash)
-    lnEl = ln.line._get_or_add_ln()
-    if head:
-        h = lnEl.makeelement(qn("a:headEnd"), {})  # placeholder, replaced below
-    # pptx draws from (x1,y1)->(x2,y2); arrow at the END uses tailEnd
-    if head:
-        e = lnEl.makeelement(qn("a:tailEnd"), {"type": head, "w": "med", "len": "med"})
-        lnEl.append(e)
-    if tail:
-        e = lnEl.makeelement(qn("a:headEnd"), {"type": tail, "w": "med", "len": "med"})
-        lnEl.append(e)
-    return ln
+    """Repair-proof arrow: a single filled freeform polygon (shaft + triangular
+    head), instead of a connector with line-end XML that PowerPoint's document
+    repair mangles."""
+    import math
+
+    x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
+    L = math.hypot(x2 - x1, y2 - y1)
+    if L < 1:
+        return None
+    ux, uy = (x2 - x1) / L, (y2 - y1) / L
+    nx, ny = -uy, ux
+    lw = Pt(weight)                       # shaft full width in EMU
+    hl = min(max(5.0 * lw, Inches(0.08)), 0.6 * L)   # head length
+    hw = 0.55 * hl                        # head half-width
+    h = lw / 2.0                          # shaft half-width
+    bx, by = x2 - ux * hl, y2 - uy * hl   # head base point
+
+    pts = [
+        (x1 + nx * h, y1 + ny * h),
+        (bx + nx * h, by + ny * h),
+        (bx + nx * hw, by + ny * hw),
+        (x2, y2),
+        (bx - nx * hw, by - ny * hw),
+        (bx - nx * h, by - ny * h),
+        (x1 - nx * h, y1 - ny * h),
+    ]
+    fb = slide.shapes.build_freeform(pts[0][0], pts[0][1], scale=1.0)
+    fb.add_line_segments([(int(px), int(py)) for px, py in pts[1:]], close=True)
+    sp = fb.convert_to_shape()
+    sp.fill.solid()
+    sp.fill.fore_color.rgb = color
+    sp.line.fill.background()
+    sp.shadow.inherit = False
+    return sp
 
 
 def shape_text(sh, runs, size=13, color=INK, bold=False, align=PP_ALIGN.CENTER,

@@ -32,7 +32,7 @@ def fig_aspect(name):
         return im.size[0] / im.size[1]
 
 
-TOTAL = 19
+TOTAL = 20
 BODY_TOP = Inches(1.32)
 CONTENT_W = PAGE_W - 2 * MARGIN
 MONO = "Consolas"
@@ -59,7 +59,8 @@ def s01_title():
         idx = ph.placeholder_format.idx
         if idx == 13:  # main title block
             tf = ph.text_frame
-            tf.text = "GPU-resident material models for explicit dynamics in MOOSE"
+            tf.text = ("Accelerated Explicit Dynamics Simulations of Impact Problems "
+                       "Using GPU-Enabled Material Models in MOOSE")
             sub = tf.add_paragraph()
             r = sub.add_run()
             r.text = "A NEML2 nodal-force interface for high-rate solid mechanics"
@@ -169,20 +170,20 @@ def s03_gap():
 
 # ================================================================ 4 EQUATIONS I
 def s04_governing():
-    s = new_slide(prs, "Formulation 1/3", "Governing equations of explicit solid dynamics",
+    s = new_slide(prs, "Formulation 1/5", "Governing equations of explicit solid dynamics",
                   number=4, total=TOTAL)
     lx = MARGIN + Inches(0.1)
     label_x = MARGIN + Inches(7.9)
     label_w = CONTENT_W - Inches(7.9)
     rows = [
-        (r"$\rho\,\ddot{\mathbf{u}} \;=\; \nabla\!\cdot\!\boldsymbol{\sigma} + \rho\,\mathbf{b} \quad \text{in } \Omega$",
-         "balance of linear momentum", 1.9, "momentum_strong_form"),
-        (r"$\int_{\Omega}\rho\,\mathbf{w}\!\cdot\!\ddot{\mathbf{u}}\;dV \;+\; \int_{\Omega}\nabla\mathbf{w}:\boldsymbol{\sigma}\;dV \;=\; \int_{\Gamma_t}\mathbf{w}\!\cdot\!\bar{\mathbf{t}}\;dA \;+\; \int_{\Omega}\rho\,\mathbf{w}\!\cdot\!\mathbf{b}\;dV$",
-         "weak form: multiply by test function, integrate by parts", 1.9, "weak_form"),
-        (r"$\mathbf{M}\,\ddot{\mathbf{u}} \;=\; \mathbf{F}^{\mathrm{ext}} \;-\; \mathbf{F}^{\mathrm{int}}(\boldsymbol{\sigma})$",
-         "discretize in space: semi-discrete momentum equation", 1.9, "semi_discrete_momentum"),
-        (r"$\mathbf{F}^{\mathrm{int}} \;=\; \mathop{\mathrm{A}}_{e}\int_{\Omega_e}\mathbf{B}^{\!\top}\boldsymbol{\sigma}\;dV, \qquad \boldsymbol{\sigma} = \text{constitutive model}(\boldsymbol{\varepsilon},\ \text{state})$",
-         "internal force: assembled from quadrature-point stress", 1.9, "internal_force_assembly"),
+        (r"$\rho_0\,\ddot{\mathbf{u}} \;=\; \nabla_{\!0}\!\cdot\!\mathbf{P} + \rho_0\,\mathbf{b} \quad \text{in } \Omega_0$",
+         "balance of linear momentum on the reference domain", 1.9, "momentum_strong_form_tl"),
+        (r"$\int_{\Omega_0}\rho_0\,\mathbf{w}\!\cdot\!\ddot{\mathbf{u}}\;dV \;+\; \int_{\Omega_0}\nabla_{\!0}\mathbf{w}:\mathbf{P}\;dV \;=\; \int_{\Gamma_{0,t}}\mathbf{w}\!\cdot\!\bar{\mathbf{t}}_0\;dA \;+\; \int_{\Omega_0}\rho_0\,\mathbf{w}\!\cdot\!\mathbf{b}\;dV$",
+         "total-Lagrangian weak form — every integral on the reference configuration", 1.9, "weak_form_tl"),
+        (r"$\mathbf{M}\,\ddot{\mathbf{u}} \;=\; \mathbf{F}^{\mathrm{ext}} \;-\; \mathbf{F}^{\mathrm{int}}(\mathbf{P})$",
+         "discretize in space: semi-discrete momentum equation", 1.9, "semi_discrete_momentum_tl"),
+        (r"$\mathbf{F}^{\mathrm{int}} \;=\; \mathop{\mathrm{A}}_{e}\int_{\Omega_{0,e}}\mathbf{B}^{\!\top}\mathbf{P}\;dV, \qquad \mathbf{P} = \text{constitutive model}(\mathbf{F},\ \text{state})$",
+         "internal force from the first Piola–Kirchhoff stress at each quadrature point", 1.9, "internal_force_assembly_tl"),
     ]
     y = BODY_TOP + Inches(0.2)
     for latex, caption, scale, eqname in rows:
@@ -190,16 +191,98 @@ def s04_governing():
         add_text(s, label_x, y - Inches(0.04), label_w, Inches(0.7),
                  caption, size=12.5, color=BODY, italic=True)
         y += Inches(1.08)
-    takeaway(s, [("Everything above is standard.", {"bold": True, "color": INK}),
-                 (" The physics of the material lives in one place — the stress ", {}),
-                 ("σ", {"bold": True, "color": INK}),
-                 (" at each quadrature point. That is where NEML2 will plug in.", {})])
+    takeaway(s, [("Reference-domain integrals: ", {"bold": True, "color": INK}),
+                 ("shape functions, weights, and dof maps never change during the run — and the material physics lives in one place, the stress ", {}),
+                 ("P", {"bold": True, "color": INK}),
+                 (" at each quadrature point. That is where NEML2 plugs in.", {})])
 
 
-# ================================================================ 5 EQUATIONS II
-def s05_integration():
-    s = new_slide(prs, "Formulation 2/3", "Explicit time integration: ExplicitMixedOrder",
+# ================================================================ 5 CONSTITUTIVE: KINEMATICS
+def s05_kinematics():
+    s = new_slide(prs, "Formulation 2/5", "The material model I: finite-strain kinematics",
                   number=5, total=TOTAL)
+    lx = MARGIN + Inches(0.1)
+    label_x = MARGIN + Inches(7.55)
+    label_w = CONTENT_W - Inches(7.55)
+    rows = [
+        (r"$\mathbf{F} \;=\; \mathbf{F}^{e}\,\mathbf{F}^{p}$",
+         "multiplicative split: Fᵖ carries the crush, elastic strain stays small", "mult_split"),
+        (r"$\mathbf{F}^{e}_{\mathrm{tr}} = \mathbf{F}\,(\mathbf{F}^{p}_{n})^{-1}, \qquad \mathbf{E}^{e}_{\mathrm{tr}} = \tfrac{1}{2}\big(\mathbf{F}^{e\top}_{\mathrm{tr}}\mathbf{F}^{e}_{\mathrm{tr}} - \mathbf{I}\big)$",
+         "trial state: plastic flow frozen at the old Fᵖ", "trial_state_kin"),
+        (r"$\mathbf{S} = \mathbb{C} : \big(\mathbf{E}^{e}_{\mathrm{tr}} - \Delta\varepsilon^{p}\,\mathbf{N}\big), \qquad \mathbf{N} = \tfrac{3}{2}\,\mathrm{dev}\,\mathbf{S}_{\mathrm{tr}}\,/\,\sigma_{\mathrm{vm,tr}}$",
+         "radial return on the trial elastic strain — one scalar unknown", "radial_return_kin"),
+        (r"$\mathbf{F}^{p}_{n+1} \;=\; \big(\mathbf{I} + \Delta\varepsilon^{p}\,\mathbf{N}\big)\,\mathbf{F}^{p}_{n}$",
+         "linearized exponential-map plastic update", "fp_update"),
+        (r"$\mathbf{P} \;=\; \mathbf{F}\;\big(\mathbf{F}^{p-1}\,\mathbf{S}\,\mathbf{F}^{p-\top}\big)$",
+         "pull-back to the reference configuration — the PK1 the weak form needs", "pk1_pullback"),
+    ]
+    y = BODY_TOP + Inches(0.08)
+    for latex, caption, eqname in rows:
+        add_eq(s, latex, lx, y, scale=1.75, name=eqname)
+        add_text(s, label_x, y - Inches(0.02), label_w, Inches(0.7),
+                 caption, size=11.5, color=BODY, italic=True)
+        y += Inches(0.88)
+    takeaway(s, [("Each quantity lives on the right domain:", {"bold": True, "color": INK}),
+                 (" S on the relaxed intermediate configuration, P on the reference — matching the Ω", {}),
+                 ("0", {"sub": True}),
+                 (" integrals of the weak form. Elastic strain stays ~10⁻³, so the St. Venant–Kirchhoff law is safe under severe compression.", {})])
+
+
+# ================================================================ 6 CONSTITUTIVE: JC FLOW
+def s06_jc():
+    s = new_slide(prs, "Formulation 3/5", "The material model II: Johnson–Cook flow and adiabatic heating",
+                  number=6, total=TOTAL)
+    lw = Inches(8.0)
+    rows = [
+        (r"$\sigma_y \;=\; \big(A + B\,(\varepsilon^{p} + \varepsilon^{p}_{0})^{\,n}\big)\,\big(1 - T^{*m}\big), \qquad T^{*} = \tfrac{T - T_{\mathrm{ref}}}{T_{\mathrm{melt}} - T_{\mathrm{ref}}}$",
+         "flow stress: strain hardening × thermal softening; prior cold work ε₀ᵖ sets the temper", "jc_flow_stress"),
+        (r"$\dot{\varepsilon}^{p} \;=\; \dot{\varepsilon}_0\, \exp\!\Big[\tfrac{1}{C}\Big(\tfrac{\sigma_{\mathrm{vm}}}{\sigma_y} - 1\Big)\Big] \quad (\sigma_{\mathrm{vm}} > \sigma_y)$",
+         "rate form (inverted Johnson–Cook): smooth viscoplastic overstress law", "jc_rate_form"),
+        (r"$\rho\, c_p\, \dot{T} \;=\; \beta\, \sigma_{\mathrm{vm}}\, \dot{\varepsilon}^{p}$",
+         "adiabatic Taylor–Quinney heating, integrated inside the model (β = 0.9)", "adiabatic_heating"),
+    ]
+    y = BODY_TOP + Inches(0.18)
+    for latex, caption, eqname in rows:
+        add_eq(s, latex, MARGIN + Inches(0.1), y, scale=1.85, name=eqname)
+        add_text(s, MARGIN + Inches(0.14), y + Inches(0.62), lw, Inches(0.32),
+                 caption, size=11.5, color=MUTED, italic=True)
+        y += Inches(1.32)
+    # right: parameter card
+    px = MARGIN + lw + Inches(0.45)
+    pw = CONTENT_W - lw - Inches(0.45)
+    add_card(s, px, BODY_TOP, pw, Inches(4.35), fill=WHITE, line=CARD_LN, line_w=1.0)
+    add_text(s, px + Inches(0.24), BODY_TOP + Inches(0.16), pw - Inches(0.48), Inches(0.3),
+             "OFHC COPPER (CuH04 SHOT)", size=10.5, color=MUTED, bold=True)
+    prm = [
+        ("E, ν", "117 GPa, 0.34", False),
+        ("ρ, cₚ", "8960 kg/m³, 385 J/kg·K", False),
+        ("β, m", "0.9, 0.98", False),
+        ("A", "129 MPa", True),
+        ("B", "308 MPa", True),
+        ("n", "0.47", True),
+        ("C", "0.022", True),
+        ("ε₀ᵖ", "0.14  (H04 temper)", True),
+    ]
+    ry = BODY_TOP + Inches(0.52)
+    for k, v, cal in prm:
+        add_text(s, px + Inches(0.26), ry, Inches(1.15), Inches(0.3),
+                 k, size=12, color=INK, bold=True)
+        add_text(s, px + Inches(1.45), ry, pw - Inches(1.7), Inches(0.3),
+                 [[(v, {"color": GREEN if cal else BODY, "bold": cal})]], size=12)
+        ry += Inches(0.4)
+    add_line(s, px + Inches(0.24), BODY_TOP + Inches(1.78), px + pw - Inches(0.24),
+             BODY_TOP + Inches(1.78), color=CARD_LN, weight=0.75)
+    add_text(s, px + Inches(0.26), ry + Inches(0.04), pw - Inches(0.5), Inches(0.55),
+             [[("green = Bayesian-calibrated against the recovered specimen (later in this talk)",
+                {"color": GREEN, "italic": True})]], size=10.5, leading=1.1)
+    takeaway(s, [("Rate-, hardening-, and temperature-coupled with three internal states (εᵖ, Fᵖ, T)", {"bold": True, "color": INK}),
+                 (" — exactly the model class that makes conventional per-point CPU updates expensive.", {})])
+
+
+# ================================================================ 7 EQUATIONS II
+def s05_integration():
+    s = new_slide(prs, "Formulation 4/5", "Explicit time integration: ExplicitMixedOrder",
+                  number=7, total=TOTAL)
     lw = Inches(7.3)
     add_text(s, MARGIN, BODY_TOP, lw, Inches(0.3),
              [[("Central difference, as implemented in our ", {}),
@@ -249,8 +332,8 @@ def s05_integration():
 
 # ================================================================ 6 EQUATIONS III
 def s06_stability_cost():
-    s = new_slide(prs, "Formulation 3/3", "Stability sets the step; the material sets the cost",
-                  number=6, total=TOTAL)
+    s = new_slide(prs, "Formulation 5/5", "Stability sets the step; the material sets the cost",
+                  number=8, total=TOTAL)
     lw = Inches(6.9)
     add_text(s, MARGIN, BODY_TOP, lw, Inches(0.3),
              "Conditional stability (CFL): the step must resolve the fastest stress wave",
@@ -301,7 +384,7 @@ def s06_stability_cost():
 # ================================================================ 7 MOOSE
 def s07_moose():
     s = new_slide(prs, "Building blocks", "MOOSE: the multiphysics host",
-                  number=7, total=TOTAL)
+                  number=9, total=TOTAL)
     add_text(s, MARGIN, BODY_TOP, CONTENT_W, Inches(0.35),
              [[("Open-source multiphysics FE framework (Idaho National Laboratory) — ", {}),
                ("we keep all of this for free", {"bold": True, "color": INK})]],
@@ -333,7 +416,7 @@ def s07_moose():
 # ================================================================ 8 NEML2
 def s08_neml2():
     s = new_slide(prs, "Building blocks", "NEML2: the material engine",
-                  number=8, total=TOTAL)
+                  number=10, total=TOTAL)
     add_text(s, MARGIN, BODY_TOP, CONTENT_W, Inches(0.35),
              [[("New Engineering Material model Library v2 (ANL, open source) — constitutive models as ", {}),
                ("composable tensor programs", {"bold": True, "color": INK})]],
@@ -396,7 +479,7 @@ def s08_neml2():
 # ================================================================ 9 WHAT WE DID
 def s09_contribution():
     s = new_slide(prs, "This work", "What we built: two pillars, one force path",
-                  number=9, total=TOTAL)
+                  number=11, total=TOTAL)
     col_gap = Inches(0.5)
     cw = (CONTENT_W - col_gap) / 2
     ch = Inches(2.9)
@@ -444,7 +527,7 @@ def s09_contribution():
 # ================================================================ 10 FORCE PATH
 def s10_force_path():
     s = new_slide(prs, "This work", "One explicit step through the NEML2 force path",
-                  number=10, total=TOTAL)
+                  number=12, total=TOTAL)
     # geometry
     top = BODY_TOP + Inches(0.62)
     stage_h = Inches(1.62)
@@ -524,7 +607,7 @@ def s10_force_path():
 # ================================================================ 11 STATE RESIDENCY
 def s11_state():
     s = new_slide(prs, "This work", "Constitutive state never leaves the device",
-                  number=11, total=TOTAL)
+                  number=13, total=TOTAL)
     lane_label_w = Inches(1.15)
     half_h = Inches(1.92)
     gap = Inches(0.34)
@@ -592,7 +675,7 @@ def s11_state():
 # ================================================================ 12 SUMMARY / HANDOFF
 def s12_summary():
     s = new_slide(prs, "This work", "The method, in one slide",
-                  number=12, total=TOTAL)
+                  number=14, total=TOTAL)
     rows = [
         ("Explicit runtime ≈ steps × material-update cost",
          "CFL fixes the step count; the constitutive update is the only lever", BLUE),
@@ -623,73 +706,17 @@ def s12_summary():
              size=15, anchor=MSO_ANCHOR.MIDDLE)
 
 
-# ================================================================ 13 RESULTS: VERIFICATION
-def s13_verification():
-    s = new_slide(prs, None, "The interface adds no error — in any formulation", number=13, total=TOTAL)
-    add_text(s, MARGIN, BODY_TOP - Inches(0.08), CONTENT_W, Inches(0.35),
-             [[("Matched pairs: ", {}),
-               ("the same model through both force paths", {"bold": True, "color": INK}),
-               (" — same mesh, same steps; only the assembly differs. Each pair exodiffs against one shared gold.", {})]],
-             size=14.5, color=BODY)
-    # left: the matched-pair ladder
-    lw = Inches(7.15)
-    pairs = [
-        ("2-D small strain", "NEML2 J2 vs MOOSE native radial return"),
-        ("RZ small strain, thermal JC", "force path vs conventional NEML2 coupling"),
-        ("RZ total-Lagrangian JC (PK1)", "large deformation on the reference mesh"),
-        ("RZ multiplicative JC  (F = FᵉFᵖ)", "finite-strain plasticity, identity-seeded Fᵖ"),
-        ("RZ multiplicative + F-bar", "batched volumetric stabilization"),
-        ("β = 0 thermal ≡ isothermal", "in-model heating identity to 10⁻¹⁵"),
-    ]
-    ry = BODY_TOP + Inches(0.52)
-    for head, sub in pairs:
-        add_card(s, MARGIN, ry, lw, Inches(0.6), fill=WHITE, line=CARD_LN, line_w=0.75)
-        add_text(s, MARGIN + Inches(0.24), ry + Inches(0.05), Inches(4.3), Inches(0.32),
-                 head, size=12.5, color=INK, bold=True)
-        add_text(s, MARGIN + Inches(0.24), ry + Inches(0.33), lw - Inches(1.4), Inches(0.26),
-                 sub, size=10, color=MUTED)
-        add_text(s, MARGIN + lw - Inches(1.15), ry, Inches(0.95), Inches(0.6),
-                 "✓", size=20, color=GREEN, bold=True, align=PP_ALIGN.CENTER,
-                 anchor=MSO_ANCHOR.MIDDLE)
-        ry += Inches(0.68)
-    # right: the two big numbers
-    px = MARGIN + lw + Inches(0.45)
-    pw = CONTENT_W - lw - Inches(0.45)
-    stats = [
-        ([("≤ 3 × 10", {}), ("−8", {"sup": True, "size": 26})],
-         "max nodal-force difference (rel. to peak)", BLUE),
-        ([("≤ 8 × 10", {}), ("−8", {"sup": True, "size": 26})],
-         "max relative displacement difference", GREEN),
-    ]
-    sy = BODY_TOP + Inches(0.52)
-    for segs, lab, c in stats:
-        add_card(s, px, sy, pw, Inches(1.5), fill=WHITE, line=CARD_LN, line_w=1.0)
-        add_rect(s, px, sy + Inches(0.14), Inches(0.06), Inches(1.22), c)
-        add_text(s, px + Inches(0.32), sy + Inches(0.16), pw - Inches(0.5), Inches(0.75),
-                 [[(t, {**ov, "bold": True, "color": c}) for t, ov in segs]], size=40)
-        add_text(s, px + Inches(0.34), sy + Inches(0.98), pw - Inches(0.55), Inches(0.45),
-                 lab, size=11.5, color=BODY, leading=1.1)
-        sy += Inches(1.66)
-    add_text(s, px + Inches(0.05), sy + Inches(0.05), pw - Inches(0.1), Inches(0.8),
-             [[("6,000× tighter", {"bold": True, "color": INK}),
-               (" than the regression tolerance — floating-point noise territory.", {})]],
-             size=12.5, color=BODY, leading=1.15)
-    takeaway(s, [("Six matched pairs, one rule:", {"bold": True, "color": INK}),
-                 (" the batched force path reproduces conventional assembly to machine precision — "
-                  "small strain through finite-strain plasticity, Cartesian and axisymmetric.", {})])
-
-
 # ================================================================ 14 REDUCED INTEGRATION
 def s14_reduced():
     s = new_slide(prs, None, "Reduced integration: one point per element, stabilized",
-                  number=14, total=TOTAL)
+                  number=15, total=TOTAL)
     lw = Inches(7.3)
     add_bullets(s, MARGIN, BODY_TOP + Inches(0.15), lw, Inches(4.3), [
         [("Full integration ", {}),
          ("locks volumetrically", {"bold": True}),
          (" under large plastic flow — the batched ", {}),
          ("F-bar", {"bold": True}),
-         (" correction fixes it (verified to machine precision, previous slide)", {})],
+         (" correction fixes it (verified to machine precision)", {})],
         [("The production choice instead: ", {}),
          ("one-point quadrature", {"bold": True, "color": INK}),
          (" — locking-free by construction and much cheaper per step", {})],
@@ -727,7 +754,7 @@ def s14_reduced():
 # ================================================================ 15 PERFORMANCE ANATOMY
 def s15_perf():
     s = new_slide(prs, None, "After the first step, the element loop is empty",
-                  number=15, total=TOTAL)
+                  number=16, total=TOTAL)
     lw = Inches(6.6)
     add_text(s, MARGIN, BODY_TOP, lw, Inches(0.35),
              [[("Instrumented the FE element loop of the production RZ impact run:", {})]],
@@ -784,7 +811,7 @@ def s15_perf():
 
 # ================================================================ 16 RESULTS: TAYLOR IMPACT
 def s14_taylor():
-    s = new_slide(prs, None, "3-D Taylor anvil impact, end to end", number=16, total=TOTAL)
+    s = new_slide(prs, None, "3-D Taylor anvil impact, end to end", number=17, total=TOTAL)
     add_text(s, MARGIN, BODY_TOP - Inches(0.08), CONTENT_W, Inches(0.35),
              [[("OFHC copper slug at ", {}),
                ("235.9 m/s", {"bold": True, "color": INK}),
@@ -825,7 +852,7 @@ def s14_taylor():
 # ================================================================ 17 RESULTS: THERMAL
 def s15_thermal():
     s = new_slide(prs, None, "Coupled thermo-mechanics: heating from plastic work",
-                  number=17, total=TOTAL)
+                  number=18, total=TOTAL)
     add_text(s, MARGIN, BODY_TOP - Inches(0.08), CONTENT_W, Inches(0.35),
              [[("The run you just saw is coupled — temperature integrated ", {}),
                ("inside the NEML2 model", {"bold": True, "color": INK}),
@@ -863,7 +890,7 @@ def s15_thermal():
 # ================================================================ 18 CALIBRATION
 def s18_calibration():
     s = new_slide(prs, None, "Validation: calibrated against a scanned specimen",
-                  number=18, total=TOTAL)
+                  number=19, total=TOTAL)
     add_text(s, MARGIN, BODY_TOP - Inches(0.08), CONTENT_W, Inches(0.35),
              [[("Laser-scanned recovered specimen (OFHC copper, 235.9 m/s) → axis-corrected profile target → ", {}),
                ("Bayesian calibration of the Johnson–Cook parameters", {"bold": True, "color": INK})]],
@@ -901,7 +928,7 @@ def s18_calibration():
 
 # ================================================================ 19 CONCLUSIONS
 def s19_conclusions():
-    s = new_slide(prs, None, "Takeaways", number=19, total=TOTAL)
+    s = new_slide(prs, None, "Takeaways", number=20, total=TOTAL)
     rows = [
         ("NEML2 assembles the internal nodal forces inside MOOSE explicit dynamics",
          "batched, device-resident; state advances in place; one upload + one download per step", BLUE),
@@ -936,6 +963,8 @@ def build():
     s02_motivation()
     s03_gap()
     s04_governing()
+    s05_kinematics()
+    s06_jc()
     s05_integration()
     s06_stability_cost()
     s07_moose()
@@ -944,7 +973,6 @@ def build():
     s10_force_path()
     s11_state()
     s12_summary()
-    s13_verification()
     s14_reduced()
     s15_perf()
     s14_taylor()
