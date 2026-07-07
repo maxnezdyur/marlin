@@ -32,7 +32,7 @@ def fig_aspect(name):
         return im.size[0] / im.size[1]
 
 
-TOTAL = 19
+TOTAL = 18
 BODY_TOP = Inches(1.32)
 CONTENT_W = PAGE_W - 2 * MARGIN
 MONO = "Consolas"
@@ -332,7 +332,7 @@ def s06_stability_cost():
     add_eq(s, r"$\Delta t \;\le\; \Delta t_{\mathrm{crit}} \;=\; \min\limits_{e}\, \dfrac{\ell_e}{c}, \qquad c = \sqrt{E/\rho}$",
            MARGIN + Inches(0.1), BODY_TOP + Inches(0.45), scale=1.85, name="cfl_critical_timestep")
     add_text(s, MARGIN + Inches(0.12), BODY_TOP + Inches(1.22), lw, Inches(0.3),
-             "element length over elastic wave speed (dilatational speed in 3-D)",
+             "element length over elastic wave speed",
              size=11.5, color=MUTED, italic=True)
     add_bullets(s, MARGIN, BODY_TOP + Inches(1.85), lw, Inches(2.4), [
         [("Millimeter elements: ", {}),
@@ -698,7 +698,7 @@ def s12_summary():
 
 # ================================================================ 16 RESULTS: TAYLOR IMPACT
 def s14_taylor():
-    s = new_slide(prs, None, "3-D Taylor anvil impact, end to end", number=15, total=TOTAL)
+    s = new_slide(prs, None, "Taylor anvil impact, end to end", number=15, total=TOTAL)
     add_text(s, MARGIN, BODY_TOP - Inches(0.08), CONTENT_W, Inches(0.35),
              [[("OFHC copper slug at ", {}),
                ("235.9 m/s", {"bold": True, "color": INK}),
@@ -730,9 +730,6 @@ def s14_taylor():
          (" vs annealed ", {}),
          ("43%", {"bold": True, "color": BLUE}),
          (" axial shortening", {})],
-        [("3-D full-hard shortening matches the calibrated axisymmetric model (", {}),
-         ("39.5%", {"bold": True, "color": INK}),
-         (")", {})],
     ], size=13.5, gap=10)
 
 
@@ -788,7 +785,7 @@ def s17_bayes():
     # pipeline
     stages = [
         ("Priors", "A, B lognormal. n, C, ε₀ᵖ uniform. discrepancy scale half-normal."),
-        ("96-run Sobol design", "one production RZ simulation per point (~21 min each)"),
+        ("96-run Sobol design", "one production simulation per point (~21 min each)"),
         ("Gaussian-process emulator", "PCA of the outer profile, one GP per mode. Cross-validated to 0.03 mm."),
         ("MCMC posterior", "emcee over parameters and discrepancy. The posterior median is re-run through the true model."),
     ]
@@ -836,7 +833,7 @@ def s18_calibration():
     fy = BODY_TOP + Inches(0.55)
     s.shapes.add_picture(str(FIGS / "fig_calibration.png"), MARGIN + Inches(0.1), fy, fw, fh)
     add_text(s, MARGIN + Inches(0.2), fy + fh + Inches(0.06), fw, Inches(0.24),
-             "final deformed profile, RZ production model at the calibrated posterior median",
+             "final deformed profile, production model at the calibrated posterior median",
              size=10.5, color=MUTED, italic=True)
     # RMS ladder (vertical, right)
     px = MARGIN + fw + Inches(0.6)
@@ -858,38 +855,6 @@ def s18_calibration():
         cy += Inches(1.22)
 
 
-# ================================================================ 19 CONCLUSIONS
-def s19_conclusions():
-    s = new_slide(prs, None, "Takeaways", number=19, total=TOTAL)
-    rows = [
-        ("NEML2 assembles the internal nodal forces inside MOOSE explicit dynamics",
-         "batched, device-resident; state advances in place; one upload + one download per step", BLUE),
-        ("Verified to machine precision across formulations",
-         "small strain → total-Lagrangian → multiplicative plasticity, Cartesian and axisymmetric, incl. F-bar", GREEN),
-        ("Per-step cost is one batched constitutive call",
-         "the element loop is provably empty after setup; reduced integration + knob-free hourglass control, 2.6× faster", RED),
-        ("End-to-end on a real experiment",
-         "3-D and RZ Taylor impact with in-model adiabatic heating; Bayesian-calibrated to 69 µm profile RMS against a scanned specimen", GOLD),
-    ]
-    y = BODY_TOP + Inches(0.1)
-    for i, (head, sub, color) in enumerate(rows):
-        add_card(s, MARGIN, y, CONTENT_W, Inches(0.92), fill=WHITE, line=CARD_LN, line_w=0.75)
-        badge = add_card(s, MARGIN + Inches(0.22), y + Inches(0.23), Inches(0.46), Inches(0.46),
-                         fill=color, line=None)
-        shape_text(badge, str(i + 1), size=16, color=WHITE, bold=True)
-        add_text(s, MARGIN + Inches(0.95), y + Inches(0.13), CONTENT_W - Inches(1.3), Inches(0.35),
-                 head, size=15.5, color=INK, bold=True)
-        add_text(s, MARGIN + Inches(0.95), y + Inches(0.52), CONTENT_W - Inches(1.3), Inches(0.32),
-                 sub, size=12, color=MUTED)
-        y += Inches(1.06)
-    ny = y + Inches(0.1)
-    add_card(s, MARGIN, ny, CONTENT_W, Inches(0.8), fill=BLUE_T, line=BLUE, line_w=1.0)
-    add_text(s, MARGIN + Inches(0.3), ny, CONTENT_W - Inches(0.6), Inches(0.8),
-             [[("Open source, in MOOSE today.   Next:  ", {"bold": True, "color": BLUE}),
-               ("GPU scaling studies  ·  multi-velocity calibration  ·  3-D reduced-integration production runs", {"color": INK})]],
-             size=14.5, anchor=MSO_ANCHOR.MIDDLE)
-
-
 def build():
     s01_title()
     s02_motivation()
@@ -909,7 +874,6 @@ def build():
     s15_thermal()
     s17_bayes()
     s18_calibration()
-    s19_conclusions()
     prs.save(OUT)
     print(f"wrote {OUT}")
 
