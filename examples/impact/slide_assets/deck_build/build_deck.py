@@ -32,7 +32,7 @@ def fig_aspect(name):
         return im.size[0] / im.size[1]
 
 
-TOTAL = 20
+TOTAL = 21
 BODY_TOP = Inches(1.32)
 CONTENT_W = PAGE_W - 2 * MARGIN
 MONO = "Consolas"
@@ -919,6 +919,47 @@ def s18_calibration():
         cy += Inches(1.22)
 
 
+# ================================================================ 21 SECOND SHOT
+def s21_prediction():
+    s = new_slide(prs, None, "Prediction at a second velocity",
+                  number=21, total=TOTAL)
+    add_text(s, MARGIN, BODY_TOP - Inches(0.08), CONTENT_W, Inches(0.35),
+             [[("A second specimen was shot at ", {}),
+               ("132.3 m/s", {"bold": True, "color": INK}),
+               (" and scanned. The calibrated model was run at that velocity with ", {}),
+               ("no refitting", {"bold": True, "color": INK}),
+               (".", {})]],
+             size=14.5, color=BODY)
+    fw = Inches(7.6)
+    fh = Inches(7.6 / fig_aspect("fig_predict132.png"))
+    fy = BODY_TOP + Inches(0.55)
+    s.shapes.add_picture(str(FIGS / "fig_predict132.png"), MARGIN + Inches(0.1), fy, fw, fh)
+    add_text(s, MARGIN + Inches(0.2), fy + fh + Inches(0.06), fw, Inches(0.24),
+             "final deformed profile, production model at the calibrated posterior median",
+             size=10.5, color=MUTED, italic=True)
+    # right: stat cards
+    px = MARGIN + fw + Inches(0.6)
+    pw = CONTENT_W - fw - Inches(0.6)
+    cy = fy + Inches(0.05)
+    add_card(s, px, cy, pw, Inches(1.5), fill=WHITE, line=CARD_LN, line_w=0.75)
+    add_rect(s, px, cy + Inches(0.12), Inches(0.055), Inches(1.26), GREEN)
+    add_text(s, px + Inches(0.26), cy + Inches(0.14), pw - Inches(0.5), Inches(0.5),
+             [[("81 µm", {"bold": True, "color": GREEN, "size": 26}),
+               ("  profile RMS", {"size": 11, "color": MUTED})]], size=26)
+    add_text(s, px + Inches(0.26), cy + Inches(0.72), pw - Inches(0.5), Inches(0.7),
+             "blind, at a velocity 44% below the calibration shot",
+             size=11.5, color=BODY, leading=1.15)
+    cy += Inches(1.72)
+    add_card(s, px, cy, pw, Inches(1.6), fill=WHITE, line=CARD_LN, line_w=0.75)
+    add_rect(s, px, cy + Inches(0.12), Inches(0.055), Inches(1.36), BLUE)
+    add_text(s, px + Inches(0.26), cy + Inches(0.12), pw - Inches(0.5), Inches(0.35),
+             "Joint two-shot calibration", size=12.5, color=INK, bold=True)
+    add_text(s, px + Inches(0.26), cy + Inches(0.5), pw - Inches(0.5), Inches(1.0),
+             "Recalibrating against both scans lands each shot near 75 µm and "
+             "resolves the hardening exponent away from its prior bound.",
+             size=11.5, color=BODY, leading=1.15)
+
+
 def build():
     s01_title()
     s02_motivation()
@@ -940,6 +981,7 @@ def build():
     s15_thermal()
     s17_bayes()
     s18_calibration()
+    s21_prediction()
     prs.save(OUT)
     print(f"wrote {OUT}")
 
