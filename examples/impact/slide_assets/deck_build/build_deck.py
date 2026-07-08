@@ -32,7 +32,7 @@ def fig_aspect(name):
         return im.size[0] / im.size[1]
 
 
-TOTAL = 19
+TOTAL = 20
 BODY_TOP = Inches(1.32)
 CONTENT_W = PAGE_W - 2 * MARGIN
 MONO = "Consolas"
@@ -767,10 +767,34 @@ def s14_taylor():
     ], size=13.5, gap=10)
 
 
+# ================================================================ 17 SIMULATION VIDEOS
+def s17_videos():
+    s = new_slide(prs, None, "The simulated impact", number=17, total=TOTAL)
+    vids = [
+        ("slug_impact_horizontal.mp4", "fig_video_h_poster.png", "perspective view"),
+        ("slug_impact_side.mp4", "fig_video_side_poster.png",
+         "side profile, the high-speed camera framing"),
+    ]
+    gap = Inches(0.5)
+    vw = (CONTENT_W - gap) / 2
+    vh = vw * 9 / 16
+    vy = BODY_TOP + Inches(0.55)
+    for i, (mp4, poster, cap) in enumerate(vids):
+        vx = MARGIN + i * (vw + gap)
+        s.shapes.add_movie(str(HERE.parent / mp4), vx, vy, vw, vh,
+                           poster_frame_image=str(FIGS / poster),
+                           mime_type="video/mp4")
+        add_text(s, vx + Inches(0.05), vy + vh + Inches(0.08), vw, Inches(0.3),
+                 cap, size=11, color=MUTED, italic=True)
+    add_text(s, MARGIN, vy + vh + Inches(0.55), CONTENT_W, Inches(0.35),
+             [[("Calibrated model, run to rebound at 96.9 µs. "
+                "Color is effective plastic strain.", {"color": BODY})]], size=13)
+
+
 # ================================================================ 17 RESULTS: THERMAL
 def s15_thermal():
     s = new_slide(prs, None, "Coupled thermo-mechanics: heating from plastic work",
-                  number=17, total=TOTAL)
+                  number=18, total=TOTAL)
     add_text(s, MARGIN, BODY_TOP - Inches(0.08), CONTENT_W, Inches(0.35),
              [[("The run you just saw is coupled. Temperature is integrated ", {}),
                ("inside the NEML2 model", {"bold": True, "color": INK}),
@@ -808,7 +832,7 @@ def s15_thermal():
 # ================================================================ 17 BAYESIAN METHOD
 def s17_bayes():
     s = new_slide(prs, None, "Bayesian calibration of the material parameters",
-                  number=18, total=TOTAL)
+                  number=19, total=TOTAL)
     add_text(s, MARGIN, BODY_TOP - Inches(0.08), CONTENT_W, Inches(0.35),
              [[("Unknowns: ", {}),
                ("θ = (A, B, n, C, ε₀ᵖ)", {"bold": True, "color": INK}),
@@ -862,7 +886,7 @@ def s17_bayes():
 # ================================================================ 18 CALIBRATION
 def s18_calibration():
     s = new_slide(prs, None, "Validation: calibrated against a scanned specimen",
-                  number=19, total=TOTAL)
+                  number=20, total=TOTAL)
     add_text(s, MARGIN, BODY_TOP - Inches(0.08), CONTENT_W, Inches(0.35),
              [[("Laser-scanned recovered specimen (OFHC copper, 235.9 m/s) → axis-corrected profile target → ", {}),
                ("Bayesian calibration of the Johnson–Cook parameters", {"bold": True, "color": INK})]],
@@ -912,6 +936,7 @@ def build():
     s12_summary()
     s15_experiment()
     s14_taylor()
+    s17_videos()
     s15_thermal()
     s17_bayes()
     s18_calibration()
