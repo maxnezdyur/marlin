@@ -3,3 +3,5 @@
 !run_doe.py
 !fit_two.py
 !g3_median.json
+!ledger.parquet
+!g3_corner.png
