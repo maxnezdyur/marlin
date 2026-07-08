@@ -782,7 +782,9 @@ def s17_bayes():
              size=14.5, color=BODY)
     # pipeline
     stages = [
-        ("Priors", "A, B lognormal. n, C, ε₀ᵖ uniform. discrepancy scale half-normal."),
+        ("Priors", "A, B lognormal, ×/÷ 2 at 90% around literature values. "
+                   "n ∈ [0.1, 0.5], C ∈ [0.01, 0.05], ε₀ᵖ ∈ [0.1, 0.5] uniform. "
+                   "Discrepancy half-normal (0.15 mm)."),
         ("96-run Sobol design", "one production simulation per point (~21 min each)"),
         ("Gaussian-process emulator", "PCA of the outer profile, one GP per mode. Cross-validated to 0.03 mm."),
         ("MCMC posterior", "emcee over parameters and discrepancy. The posterior median is re-run through the true model."),
