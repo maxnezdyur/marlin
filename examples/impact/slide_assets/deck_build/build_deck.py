@@ -32,7 +32,7 @@ def fig_aspect(name):
         return im.size[0] / im.size[1]
 
 
-TOTAL = 18
+TOTAL = 19
 BODY_TOP = Inches(1.32)
 CONTENT_W = PAGE_W - 2 * MARGIN
 MONO = "Consolas"
@@ -546,9 +546,9 @@ def s10_force_path():
     # stages inside device
     stages = [
         ("NEML2FE", "Interpolation", "gather u, ∇u at", "all quad points"),
-        ("NEML2", "SmallStrain", "ε = sym ∇u", "whole batch"),
-        ("NEML2Model", "Executor", "σ = model(ε, state)", "one batched call"),
-        ("NEML2Stress", "Divergence", "Rᵉ = Σ ∇φ·σ JxW", "all elements at once"),
+        ("NEML2Def", "Gradient", "F = I + ∂u/∂X", "whole batch"),
+        ("NEML2Model", "Executor", "P = model(F, state)", "one batched call"),
+        ("NEML2Stress", "Divergence", "Rᵉ = Σ ∇φ·P JxW", "all elements at once"),
     ]
     n = len(stages)
     sgap = Inches(0.42)
@@ -690,13 +690,49 @@ def s12_summary():
     add_card(s, MARGIN, ny, CONTENT_W, Inches(0.85), fill=BLUE_T, line=BLUE, line_w=1.0)
     add_text(s, MARGIN + Inches(0.3), ny, CONTENT_W - Inches(0.6), Inches(0.85),
              [[("Up next:  ", {"bold": True, "color": BLUE}),
-               ("Taylor impact and coupled thermo-mechanics  ·  calibration against a scanned specimen", {"color": INK})]],
+               ("the experiment  ·  Taylor impact simulation  ·  calibration against the scanned specimen", {"color": INK})]],
              size=15, anchor=MSO_ANCHOR.MIDDLE)
+
+
+# ================================================================ 15 THE EXPERIMENT
+def s15_experiment():
+    s = new_slide(prs, None, "The experiment", number=15, total=TOTAL)
+    # video placeholder: 16:9 frame, replaced manually with the high-speed clip
+    vw = Inches(7.9)
+    vh = vw * 9 / 16
+    vy = BODY_TOP + Inches(0.18)
+    ph = add_card(s, MARGIN, vy, vw, vh, fill=INK, line=None)
+    add_text(s, MARGIN, vy + vh / 2 - Inches(0.55), vw, Inches(0.7),
+             "▶", size=40, color=WHITE, align=PP_ALIGN.CENTER)
+    add_text(s, MARGIN, vy + vh / 2 + Inches(0.15), vw, Inches(0.35),
+             "high-speed video placeholder", size=12, color=FAINT,
+             align=PP_ALIGN.CENTER, italic=True)
+    add_text(s, MARGIN + Inches(0.1), vy + vh + Inches(0.08), vw, Inches(0.28),
+             "impact and rebound of shot CuH04, high-speed camera",
+             size=10.5, color=MUTED, italic=True)
+    # right: shot facts
+    px = MARGIN + vw + Inches(0.5)
+    pw = CONTENT_W - vw - Inches(0.5)
+    facts = [
+        ("Specimen", "OFHC copper slug, Ø 7.62 mm × 38.1 mm, H04 full-hard temper"),
+        ("Shot", "235.9 m/s impact against a rigid anvil"),
+        ("Recovered geometry", "laser-scanned to a 46k-triangle surface mesh"),
+        ("Role in this talk", "the scan is the calibration and validation target"),
+    ]
+    fy = vy
+    for t, d in facts:
+        add_card(s, px, fy, pw, Inches(1.0), fill=WHITE, line=CARD_LN, line_w=0.75)
+        add_rect(s, px, fy + Inches(0.1), Inches(0.055), Inches(0.8), BLUE)
+        add_text(s, px + Inches(0.24), fy + Inches(0.1), pw - Inches(0.45), Inches(0.3),
+                 t, size=12.5, color=INK, bold=True)
+        add_text(s, px + Inches(0.24), fy + Inches(0.42), pw - Inches(0.45), Inches(0.55),
+                 d, size=11, color=BODY, leading=1.1)
+        fy += Inches(1.14)
 
 
 # ================================================================ 16 RESULTS: TAYLOR IMPACT
 def s14_taylor():
-    s = new_slide(prs, None, "Taylor anvil impact, end to end", number=15, total=TOTAL)
+    s = new_slide(prs, None, "Taylor anvil impact, end to end", number=16, total=TOTAL)
     add_text(s, MARGIN, BODY_TOP - Inches(0.08), CONTENT_W, Inches(0.35),
              [[("OFHC copper slug at ", {}),
                ("235.9 m/s", {"bold": True, "color": INK}),
@@ -734,7 +770,7 @@ def s14_taylor():
 # ================================================================ 17 RESULTS: THERMAL
 def s15_thermal():
     s = new_slide(prs, None, "Coupled thermo-mechanics: heating from plastic work",
-                  number=16, total=TOTAL)
+                  number=17, total=TOTAL)
     add_text(s, MARGIN, BODY_TOP - Inches(0.08), CONTENT_W, Inches(0.35),
              [[("The run you just saw is coupled. Temperature is integrated ", {}),
                ("inside the NEML2 model", {"bold": True, "color": INK}),
@@ -772,7 +808,7 @@ def s15_thermal():
 # ================================================================ 17 BAYESIAN METHOD
 def s17_bayes():
     s = new_slide(prs, None, "Bayesian calibration of the material parameters",
-                  number=17, total=TOTAL)
+                  number=18, total=TOTAL)
     add_text(s, MARGIN, BODY_TOP - Inches(0.08), CONTENT_W, Inches(0.35),
              [[("Unknowns: ", {}),
                ("θ = (A, B, n, C, ε₀ᵖ)", {"bold": True, "color": INK}),
@@ -807,22 +843,26 @@ def s17_bayes():
                       cx + cw + gap - Inches(0.04), cy + ch / 2, color=BLUE, weight=1.75)
         cx += cw + gap
     # posterior + likelihood
-    ey = cy + ch + Inches(0.5)
+    ey = cy + ch + Inches(0.45)
     add_eq(s, r"$\pi(\theta, \sigma_d \mid \mathrm{scan}) \;\propto\; \mathcal{L}(\mathrm{scan} \mid \theta, \sigma_d)\; \pi(\theta)\, \pi(\sigma_d)$",
-           MARGIN + Inches(0.1), ey, scale=1.85, name="bayes_posterior")
-    add_text(s, MARGIN + Inches(7.6), ey + Inches(0.04), CONTENT_W - Inches(7.6), Inches(0.6),
-             "posterior over parameters and discrepancy", size=11.5, color=MUTED, italic=True)
+           MARGIN + Inches(0.1), ey, scale=1.7, name="bayes_posterior")
+    add_text(s, MARGIN + Inches(0.14), ey + Inches(0.6), Inches(6.9), Inches(0.3),
+             "posterior over parameters and discrepancy", size=11, color=MUTED, italic=True)
     add_eq(s, r"$\mathcal{L}: \;\; r(z_i) \sim \mathcal{N}\big(r_{\mathrm{GP}}(z_i;\theta),\; \sigma_{\mathrm{scan}}^2 + \sigma_{\mathrm{GP}}^2 + \sigma_d^2\big)$",
-           MARGIN + Inches(0.1), ey + Inches(0.95), scale=1.85, name="bayes_likelihood")
-    add_text(s, MARGIN + Inches(7.6), ey + Inches(0.99), CONTENT_W - Inches(7.6), Inches(0.7),
+           MARGIN + Inches(0.1), ey + Inches(1.05), scale=1.7, name="bayes_likelihood")
+    add_text(s, MARGIN + Inches(0.14), ey + Inches(1.68), Inches(6.9), Inches(0.35),
              "Gaussian over ~40 profile stations, final length, and foot radius",
-             size=11.5, color=MUTED, italic=True)
+             size=11, color=MUTED, italic=True)
+    # right: prior bands vs posterior marginals
+    fw = Inches(4.7)
+    fh = Inches(4.7 / fig_aspect("fig_priors.png"))
+    s.shapes.add_picture(str(FIGS / "fig_priors.png"), PAGE_W - MARGIN - fw, ey - Inches(0.25), fw, fh)
 
 
 # ================================================================ 18 CALIBRATION
 def s18_calibration():
     s = new_slide(prs, None, "Validation: calibrated against a scanned specimen",
-                  number=18, total=TOTAL)
+                  number=19, total=TOTAL)
     add_text(s, MARGIN, BODY_TOP - Inches(0.08), CONTENT_W, Inches(0.35),
              [[("Laser-scanned recovered specimen (OFHC copper, 235.9 m/s) → axis-corrected profile target → ", {}),
                ("Bayesian calibration of the Johnson–Cook parameters", {"bold": True, "color": INK})]],
@@ -870,6 +910,7 @@ def build():
     s10_force_path()
     s11_state()
     s12_summary()
+    s15_experiment()
     s14_taylor()
     s15_thermal()
     s17_bayes()
