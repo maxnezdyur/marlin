@@ -37,8 +37,8 @@ for k in range(n):
     gr = horiz(r3.grid_at(d, k, "ep"))
     pl = pv.Plotter(off_screen=True, window_size=(1600, 900))
     pl.set_background("white")
-    surf = gr.extract_surface().smooth_taubin(n_iter=30, pass_band=0.05)
-    pl.add_mesh(surf, scalars="f", cmap="viridis", clim=(0, vmax), smooth_shading=True,
+    surf = gr.extract_surface()
+    pl.add_mesh(surf, scalars="f", cmap="viridis", clim=(0, vmax), smooth_shading=False,
                 show_edges=False, specular=0.15, specular_power=10,
                 diffuse=0.95, ambient=0.4, show_scalar_bar=False)
     wall = pv.Cube(center=(g0.bounds[0] - 0.01 * L, ctr[1], ctr[2]),

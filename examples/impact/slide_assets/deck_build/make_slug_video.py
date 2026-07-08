@@ -42,8 +42,8 @@ for k in range(n):
     gr = horiz(r3.grid_at(d, k, "ep"))
     pl = pv.Plotter(off_screen=True, window_size=(1600, 900))
     pl.set_background("white")
-    surf = gr.extract_surface().smooth_taubin(n_iter=30, pass_band=0.05)
-    pl.add_mesh(surf, scalars="f", cmap=cmap, clim=(0, vmax), smooth_shading=True,
+    surf = gr.extract_surface()
+    pl.add_mesh(surf, scalars="f", cmap=cmap, clim=(0, vmax), smooth_shading=False,
                 show_edges=False, specular=0.15, specular_power=10,
                 diffuse=0.95, ambient=0.35, show_scalar_bar=False)
     D = max(g0.bounds[3] - g0.bounds[2], g0.bounds[5] - g0.bounds[4])
