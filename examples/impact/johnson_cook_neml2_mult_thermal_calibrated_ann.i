@@ -128,10 +128,10 @@
     use_temperature = true
     temperature = 'state/dT~1' # lagged one step (NEML2 history notation)
     flow_rate = 'state/ep_rate'
-    A = 128609928.695 # calibrated to CuH04_235.9 (0.9 x literature)
-    B = 308024337.532 # calibrated (0.9 x literature)
-    n = 0.471542056682 # calibrated
-    C = 0.0223500379951
+    A = 103799730.939 # calibrated to CuH04_235.9 (0.9 x literature)
+    B = 328468110.085 # calibrated (0.9 x literature)
+    n = 0.431173234185 # calibrated
+    C = 0.02527548951
     m = 0.98
     reference_strain_rate = 1.0
     reference_temperature = 0

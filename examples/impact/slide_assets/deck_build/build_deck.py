@@ -251,11 +251,11 @@ def s06_jc():
         ("E, ν", "117 GPa, 0.34", False),
         ("ρ, cₚ", "8960 kg/m³, 385 J/kg·K", False),
         ("β, m", "0.9, 0.98", False),
-        ("A", "129 MPa", True),
-        ("B", "308 MPa", True),
-        ("n", "0.47", True),
-        ("C", "0.022", True),
-        ("ε₀ᵖ", "0.14  (H04 temper)", True),
+        ("A", "104 MPa", True),
+        ("B", "329 MPa", True),
+        ("n", "0.43", True),
+        ("C", "0.025", True),
+        ("ε₀ᵖ", "0.12  (H04 temper)", True),
     ]
     ry = BODY_TOP + Inches(0.52)
     for k, v, cal in prm:
@@ -265,7 +265,7 @@ def s06_jc():
                  [[(v, {"color": GREEN if cal else BODY, "bold": cal})]], size=12)
         ry += Inches(0.4)
     add_text(s, px + Inches(0.26), ry + Inches(0.04), pw - Inches(0.5), Inches(0.55),
-             [[("green = Bayesian-calibrated against the recovered specimen (later in this talk)",
+             [[("green = Bayesian-calibrated against two recovered specimens (later in this talk)",
                 {"color": GREEN, "italic": True})]], size=10.5, leading=1.1)
     takeaway(s, [("Internal state (εᵖ, Fᵖ, T) advances inside the model every step.", {"bold": True, "color": INK})])
 
@@ -838,14 +838,14 @@ def s17_bayes():
                ("θ = (A, B, n, C, ε₀ᵖ)", {"bold": True, "color": INK}),
                (" plus a model-discrepancy scale σ", {}),
                ("d", {"sub": True}),
-               (". The forward model in the loop is the production simulation itself.", {})]],
+               (". Two shots, 235.9 and 132.3 m/s, are fit jointly. The forward model in the loop is the production simulation itself.", {})]],
              size=14.5, color=BODY)
     # pipeline
     stages = [
         ("Priors", "A, B lognormal, ×/÷ 2 at 90% around literature values. "
                    "n ∈ [0.1, 0.5], C ∈ [0.01, 0.05], ε₀ᵖ ∈ [0.1, 0.5] uniform. "
                    "Discrepancy half-normal (0.15 mm)."),
-        ("96-run Sobol design", "one production simulation per point (~21 min each)"),
+        ("96-run Sobol design per shot", "one production simulation per point and velocity (~21 min each)"),
         ("Gaussian-process emulator", "PCA of the outer profile, one GP per mode. Cross-validated to 0.03 mm."),
         ("MCMC posterior", "emcee over parameters and discrepancy. The posterior median is re-run through the true model."),
     ]
@@ -875,7 +875,7 @@ def s17_bayes():
     add_eq(s, r"$\mathcal{L}: \;\; r(z_i) \sim \mathcal{N}\big(r_{\mathrm{GP}}(z_i;\theta),\; \sigma_{\mathrm{scan}}^2 + \sigma_{\mathrm{GP}}^2 + \sigma_d^2\big)$",
            MARGIN + Inches(0.1), ey + Inches(1.05), scale=1.7, name="bayes_likelihood")
     add_text(s, MARGIN + Inches(0.14), ey + Inches(1.68), Inches(6.9), Inches(0.35),
-             "Gaussian over ~40 profile stations, final length, and foot radius",
+             "Gaussian over ~40 profile stations, final length, and foot radius, per shot",
              size=11, color=MUTED, italic=True)
     # right: prior bands vs posterior marginals
     fw = Inches(4.7)
@@ -885,11 +885,12 @@ def s17_bayes():
 
 # ================================================================ 18 CALIBRATION
 def s18_calibration():
-    s = new_slide(prs, None, "Validation: calibrated against a scanned specimen",
+    s = new_slide(prs, None, "Validation: the first shot",
                   number=20, total=TOTAL)
     add_text(s, MARGIN, BODY_TOP - Inches(0.08), CONTENT_W, Inches(0.35),
-             [[("Laser-scanned recovered specimen (OFHC copper, 235.9 m/s) → axis-corrected profile target → ", {}),
-               ("Bayesian calibration of the Johnson–Cook parameters", {"bold": True, "color": INK})]],
+             [[("The jointly calibrated model at the first shot velocity of ", {}),
+               ("235.9 m/s", {"bold": True, "color": INK}),
+               (".", {})]],
              size=14.5, color=BODY)
     # figure: scan silhouette vs the calibrated run
     fw = Inches(7.6)
@@ -902,32 +903,24 @@ def s18_calibration():
     # RMS ladder (vertical, right)
     px = MARGIN + fw + Inches(0.6)
     pw = CONTENT_W - fw - Inches(0.6)
-    steps = [("Bayesian posterior median", "81 µm", BLUE),
-             ("+ frictionless anvil", "69 µm", GREEN)]
     cy = fy + Inches(0.05)
-    for i, (lab, val, c) in enumerate(steps):
-        add_card(s, px, cy, pw, Inches(0.86), fill=WHITE, line=CARD_LN, line_w=0.75)
-        add_rect(s, px, cy + Inches(0.1), Inches(0.055), Inches(0.66), c)
-        add_text(s, px + Inches(0.26), cy + Inches(0.08), pw - Inches(0.5), Inches(0.42),
-                 [[(val, {"bold": True, "color": c, "size": 22}),
-                   ("  profile RMS", {"size": 10.5, "color": MUTED})]], size=22)
-        add_text(s, px + Inches(0.26), cy + Inches(0.52), pw - Inches(0.5), Inches(0.26),
-                 lab, size=10.5, color=BODY)
-        if i < len(steps) - 1:
-            add_arrow(s, px + pw / 2, cy + Inches(0.88), px + pw / 2, cy + Inches(1.16),
-                      color=INK, weight=1.75)
-        cy += Inches(1.22)
+    add_card(s, px, cy, pw, Inches(1.5), fill=WHITE, line=CARD_LN, line_w=0.75)
+    add_rect(s, px, cy + Inches(0.12), Inches(0.055), Inches(1.26), GREEN)
+    add_text(s, px + Inches(0.26), cy + Inches(0.14), pw - Inches(0.5), Inches(0.5),
+             [[("77 µm", {"bold": True, "color": GREEN, "size": 26}),
+               ("  profile RMS", {"size": 11, "color": MUTED})]], size=26)
+    add_text(s, px + Inches(0.26), cy + Inches(0.74), pw - Inches(0.5), Inches(0.6),
+             "final length 22.96 mm vs 22.41 ± 0.44 scanned",
+             size=11.5, color=BODY, leading=1.15)
 
 
 # ================================================================ 21 SECOND SHOT
 def s21_prediction():
-    s = new_slide(prs, None, "Prediction at a second velocity",
+    s = new_slide(prs, None, "The second shot",
                   number=21, total=TOTAL)
     add_text(s, MARGIN, BODY_TOP - Inches(0.08), CONTENT_W, Inches(0.35),
-             [[("A second specimen was shot at ", {}),
+             [[("The same parameter set, run at the second shot velocity of ", {}),
                ("132.3 m/s", {"bold": True, "color": INK}),
-               (" and scanned. The calibrated model was run at that velocity with ", {}),
-               ("no refitting", {"bold": True, "color": INK}),
                (".", {})]],
              size=14.5, color=BODY)
     fw = Inches(7.6)
@@ -944,19 +937,20 @@ def s21_prediction():
     add_card(s, px, cy, pw, Inches(1.5), fill=WHITE, line=CARD_LN, line_w=0.75)
     add_rect(s, px, cy + Inches(0.12), Inches(0.055), Inches(1.26), GREEN)
     add_text(s, px + Inches(0.26), cy + Inches(0.14), pw - Inches(0.5), Inches(0.5),
-             [[("81 µm", {"bold": True, "color": GREEN, "size": 26}),
+             [[("74 µm", {"bold": True, "color": GREEN, "size": 26}),
                ("  profile RMS", {"size": 11, "color": MUTED})]], size=26)
     add_text(s, px + Inches(0.26), cy + Inches(0.72), pw - Inches(0.5), Inches(0.7),
-             "blind, at a velocity 44% below the calibration shot",
+             "at a velocity 44% below the first shot, and a much lower strain range",
              size=11.5, color=BODY, leading=1.15)
     cy += Inches(1.72)
     add_card(s, px, cy, pw, Inches(1.6), fill=WHITE, line=CARD_LN, line_w=0.75)
     add_rect(s, px, cy + Inches(0.12), Inches(0.055), Inches(1.36), BLUE)
     add_text(s, px + Inches(0.26), cy + Inches(0.12), pw - Inches(0.5), Inches(0.35),
-             "Joint two-shot calibration", size=12.5, color=INK, bold=True)
+             "Why two velocities matter", size=12.5, color=INK, bold=True)
     add_text(s, px + Inches(0.26), cy + Inches(0.5), pw - Inches(0.5), Inches(1.0),
-             "Recalibrating against both scans lands each shot near 75 µm and "
-             "resolves the hardening exponent away from its prior bound.",
+             "One shot cannot separate rate sensitivity from strain hardening. "
+             "The second velocity resolves the trade-off and pulls every "
+             "parameter to the interior of its prior.",
              size=11.5, color=BODY, leading=1.15)
 
 
