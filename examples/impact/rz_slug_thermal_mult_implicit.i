@@ -217,7 +217,8 @@ ny = 80
   start_time = 0.0
   end_time = 150e-6
   dtmax = 2e-7
-  dtmin = 1e-11
+  # floor the adaptive step at the explicit run's stable timestep
+  dtmin = 5e-9
   [TimeStepper]
     type = IterationAdaptiveDT
     dt = 1e-8
