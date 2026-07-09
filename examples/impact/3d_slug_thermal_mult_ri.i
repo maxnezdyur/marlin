@@ -5,7 +5,7 @@
 # 3-D twin of rz_slug_thermal_mult_ri.i.
 
 # timestep in seconds
-dt = 1e-8
+dt = 5e-9
 
 # impact velocity in m/s -- CuH04_235.9 shot
 v = 235.9
