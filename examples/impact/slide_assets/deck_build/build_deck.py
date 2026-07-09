@@ -787,7 +787,7 @@ def s17_videos():
         add_text(s, vx + Inches(0.05), vy + vh + Inches(0.08), vw, Inches(0.3),
                  cap, size=11, color=MUTED, italic=True)
     add_text(s, MARGIN, vy + vh + Inches(0.55), CONTENT_W, Inches(0.35),
-             [[("Calibrated model, run to rebound at 96.9 µs. "
+             [[("Calibrated model, run to rebound at 96.7 µs. "
                 "Color is effective plastic strain.", {"color": BODY})]], size=13)
 
 
