@@ -32,7 +32,7 @@ def fig_aspect(name):
         return im.size[0] / im.size[1]
 
 
-TOTAL = 21
+TOTAL = 22
 BODY_TOP = Inches(1.32)
 CONTENT_W = PAGE_W - 2 * MARGIN
 MONO = "Consolas"
@@ -660,10 +660,47 @@ def s11_state():
                  (" Transfer volume does not grow with model complexity.", {})])
 
 
+# ================================================================ 14 SPEED
+def s14_speed():
+    s = new_slide(prs, "This work", "Speed against an implicit twin", number=14, total=TOTAL)
+    add_text(s, MARGIN, BODY_TOP - Inches(0.05), CONTENT_W, Inches(0.7),
+             [[("Same mesh, material, and timestep, serial, run to rebound. The implicit twin uses "
+                "Newmark-beta with the exact NEML2 tangent and full integration with F-bar. The "
+                "explicit path uses reduced integration with hourglass control.", {})]],
+             size=14.5, color=BODY, leading=1.15)
+    # two big speedup stats
+    col_gap = Inches(0.5)
+    cw = (CONTENT_W - col_gap) / 2
+    sy = BODY_TOP + Inches(0.85)
+    sh_ = Inches(2.0)
+    stats = [("9.5×", "faster in 2D", BLUE),
+             ("25×", "faster in 3D", GREEN)]
+    for i, (val, lab, c) in enumerate(stats):
+        cx = MARGIN + i * (cw + col_gap)
+        add_card(s, cx, sy, cw, sh_, fill=WHITE, line=CARD_LN, line_w=1.0)
+        add_rect(s, cx, sy + Inches(0.18), Inches(0.07), sh_ - Inches(0.36), c)
+        add_text(s, cx + Inches(0.45), sy + Inches(0.28), cw - Inches(0.7), Inches(1.0),
+                 [[(val, {"bold": True, "color": c})]], size=54)
+        add_text(s, cx + Inches(0.47), sy + Inches(1.4), cw - Inches(0.75), Inches(0.45),
+                 lab, size=14.5, color=BODY)
+    # where the gap comes from
+    ny = sy + sh_ + Inches(0.35)
+    add_card(s, MARGIN, ny, CONTENT_W, Inches(1.15), fill=WHITE, line=CARD_LN, line_w=0.75)
+    add_text(s, MARGIN + Inches(0.28), ny + Inches(0.12), CONTENT_W - Inches(0.56), Inches(0.3),
+             "WHERE THE GAP COMES FROM", size=10.5, color=MUTED, bold=True)
+    add_text(s, MARGIN + Inches(0.28), ny + Inches(0.45), CONTENT_W - Inches(0.56), Inches(0.6),
+             [[("Each implicit step pays Newton iterations, a global Jacobian assembly, and a direct "
+                "solve, with four times the constitutive evaluations per element. The explicit step is "
+                "one batched residual and vector updates.", {"color": BODY})]],
+             size=13, leading=1.15)
+    takeaway(s, [("The gap grows with problem size.", {"bold": True, "color": INK}),
+                 (" The direct solve scales superlinearly; the batched residual scales linearly.", {})])
+
+
 # ================================================================ 12 SUMMARY / HANDOFF
 def s12_summary():
     s = new_slide(prs, "This work", "The method, in one slide",
-                  number=14, total=TOTAL)
+                  number=15, total=TOTAL)
     rows = [
         ("Explicit runtime ≈ steps × material-update cost",
          "CFL fixes the step count; the constitutive update is the only lever", BLUE),
@@ -696,7 +733,7 @@ def s12_summary():
 
 # ================================================================ 15 THE EXPERIMENT
 def s15_experiment():
-    s = new_slide(prs, None, "The experiment", number=15, total=TOTAL)
+    s = new_slide(prs, None, "The experiment", number=16, total=TOTAL)
     # video placeholder: 16:9 frame, replaced manually with the high-speed clip
     vw = Inches(7.9)
     vh = vw * 9 / 16
@@ -732,7 +769,7 @@ def s15_experiment():
 
 # ================================================================ 16 RESULTS: TAYLOR IMPACT
 def s14_taylor():
-    s = new_slide(prs, None, "Taylor anvil impact, end to end", number=16, total=TOTAL)
+    s = new_slide(prs, None, "Taylor anvil impact, end to end", number=17, total=TOTAL)
     add_text(s, MARGIN, BODY_TOP - Inches(0.08), CONTENT_W, Inches(0.35),
              [[("OFHC copper slug at ", {}),
                ("235.9 m/s", {"bold": True, "color": INK}),
@@ -769,7 +806,7 @@ def s14_taylor():
 
 # ================================================================ 17 SIMULATION VIDEOS
 def s17_videos():
-    s = new_slide(prs, None, "The simulated impact", number=17, total=TOTAL)
+    s = new_slide(prs, None, "The simulated impact", number=18, total=TOTAL)
     vids = [
         ("slug_impact_horizontal.mp4", "fig_video_h_poster.png", "perspective view"),
         ("slug_impact_side.mp4", "fig_video_side_poster.png",
@@ -794,7 +831,7 @@ def s17_videos():
 # ================================================================ 17 RESULTS: THERMAL
 def s15_thermal():
     s = new_slide(prs, None, "Coupled thermo-mechanics: heating from plastic work",
-                  number=18, total=TOTAL)
+                  number=19, total=TOTAL)
     add_text(s, MARGIN, BODY_TOP - Inches(0.08), CONTENT_W, Inches(0.35),
              [[("The run you just saw is coupled. Temperature is integrated ", {}),
                ("inside the NEML2 model", {"bold": True, "color": INK}),
@@ -832,7 +869,7 @@ def s15_thermal():
 # ================================================================ 17 BAYESIAN METHOD
 def s17_bayes():
     s = new_slide(prs, None, "Bayesian calibration of the material parameters",
-                  number=19, total=TOTAL)
+                  number=20, total=TOTAL)
     add_text(s, MARGIN, BODY_TOP - Inches(0.08), CONTENT_W, Inches(0.35),
              [[("Unknowns: ", {}),
                ("θ = (A, B, n, C, ε₀ᵖ)", {"bold": True, "color": INK}),
@@ -886,7 +923,7 @@ def s17_bayes():
 # ================================================================ 18 CALIBRATION
 def s18_calibration():
     s = new_slide(prs, None, "Validation: the first shot",
-                  number=20, total=TOTAL)
+                  number=21, total=TOTAL)
     add_text(s, MARGIN, BODY_TOP - Inches(0.08), CONTENT_W, Inches(0.35),
              [[("The jointly calibrated model at the first shot velocity of ", {}),
                ("235.9 m/s", {"bold": True, "color": INK}),
@@ -917,7 +954,7 @@ def s18_calibration():
 # ================================================================ 21 SECOND SHOT
 def s21_prediction():
     s = new_slide(prs, None, "The second shot",
-                  number=21, total=TOTAL)
+                  number=22, total=TOTAL)
     add_text(s, MARGIN, BODY_TOP - Inches(0.08), CONTENT_W, Inches(0.35),
              [[("The same parameter set, run at the second shot velocity of ", {}),
                ("132.3 m/s", {"bold": True, "color": INK}),
@@ -968,6 +1005,7 @@ def build():
     s09_contribution()
     s10_force_path()
     s11_state()
+    s14_speed()
     s12_summary()
     s15_experiment()
     s14_taylor()
