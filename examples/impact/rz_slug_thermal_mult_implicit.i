@@ -216,12 +216,12 @@ ny = 80
 
   start_time = 0.0
   end_time = 150e-6
-  dtmax = 2e-7
-  # floor the adaptive step at the explicit run's stable timestep
-  dtmin = 5e-9
+  # cap the adaptive step at the explicit run's stable timestep
+  dtmax = 5e-9
+  dtmin = 1e-11
   [TimeStepper]
     type = IterationAdaptiveDT
-    dt = 1e-8
+    dt = 5e-9
     optimal_iterations = 8
     growth_factor = 1.4
     cutback_factor = 0.5
