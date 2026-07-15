@@ -663,38 +663,50 @@ def s11_state():
 # ================================================================ 14 SPEED
 def s14_speed():
     s = new_slide(prs, "This work", "Speed against an implicit twin", number=14, total=TOTAL)
-    add_text(s, MARGIN, BODY_TOP - Inches(0.05), CONTENT_W, Inches(0.7),
-             [[("Same mesh, material, and timestep, serial, run to rebound. The implicit twin uses "
-                "Newmark-beta with the exact NEML2 tangent and full integration with F-bar. The "
-                "explicit path uses reduced integration with hourglass control.", {})]],
-             size=14.5, color=BODY, leading=1.15)
-    # two big speedup stats
+    add_text(s, MARGIN, BODY_TOP - Inches(0.05), CONTENT_W, Inches(0.35),
+             [[("The same impact problem, about one million degrees of freedom, "
+                "run for the same number of steps at the same timestep.", {})]],
+             size=14.5, color=BODY)
+    # two configuration cards
     col_gap = Inches(0.5)
     cw = (CONTENT_W - col_gap) / 2
-    sy = BODY_TOP + Inches(0.85)
-    sh_ = Inches(2.0)
-    stats = [("9.5×", "faster in 2D", BLUE),
-             ("25×", "faster in 3D", GREEN)]
-    for i, (val, lab, c) in enumerate(stats):
+    cy = BODY_TOP + Inches(0.55)
+    ch = Inches(1.95)
+    configs = [
+        ("IMPLICIT TWIN", RED, [
+            "Newmark-beta with the exact NEML2 tangent",
+            "Full integration with F-bar",
+            "MUMPS direct solve on 32 MPI ranks",
+        ]),
+        ("EXPLICIT PATH", GREEN, [
+            "Central difference, batched NEML2 force assembly",
+            "Reduced integration with hourglass control",
+            "One CPU core and one GPU",
+        ]),
+    ]
+    for i, (t, c, lines) in enumerate(configs):
         cx = MARGIN + i * (cw + col_gap)
-        add_card(s, cx, sy, cw, sh_, fill=WHITE, line=CARD_LN, line_w=1.0)
-        add_rect(s, cx, sy + Inches(0.18), Inches(0.07), sh_ - Inches(0.36), c)
-        add_text(s, cx + Inches(0.45), sy + Inches(0.28), cw - Inches(0.7), Inches(1.0),
-                 [[(val, {"bold": True, "color": c})]], size=54)
-        add_text(s, cx + Inches(0.47), sy + Inches(1.4), cw - Inches(0.75), Inches(0.45),
-                 lab, size=14.5, color=BODY)
-    # where the gap comes from
-    ny = sy + sh_ + Inches(0.35)
-    add_card(s, MARGIN, ny, CONTENT_W, Inches(1.15), fill=WHITE, line=CARD_LN, line_w=0.75)
-    add_text(s, MARGIN + Inches(0.28), ny + Inches(0.12), CONTENT_W - Inches(0.56), Inches(0.3),
-             "WHERE THE GAP COMES FROM", size=10.5, color=MUTED, bold=True)
-    add_text(s, MARGIN + Inches(0.28), ny + Inches(0.45), CONTENT_W - Inches(0.56), Inches(0.6),
-             [[("Each implicit step pays Newton iterations, a global Jacobian assembly, and a direct "
-                "solve, with four times the constitutive evaluations per element. The explicit step is "
-                "one batched residual and vector updates.", {"color": BODY})]],
-             size=13, leading=1.15)
-    takeaway(s, [("The gap grows with problem size.", {"bold": True, "color": INK}),
-                 (" The direct solve scales superlinearly; the batched residual scales linearly.", {})])
+        add_card(s, cx, cy, cw, ch, fill=WHITE, line=CARD_LN, line_w=1.0)
+        add_rect(s, cx, cy + Inches(0.14), Inches(0.06), ch - Inches(0.28), c)
+        add_text(s, cx + Inches(0.3), cy + Inches(0.16), cw - Inches(0.55), Inches(0.3),
+                 t, size=11, color=c, bold=True)
+        add_bullets(s, cx + Inches(0.32), cy + Inches(0.52), cw - Inches(0.6), ch - Inches(0.7),
+                    lines, size=12.5, gap=6, bullet_color=c)
+    # the number
+    sy = cy + ch + Inches(0.3)
+    add_card(s, MARGIN, sy, CONTENT_W, Inches(1.35), fill=WHITE, line=CARD_LN, line_w=1.0)
+    add_text(s, MARGIN + Inches(0.5), sy, Inches(3.2), Inches(1.35),
+             [[("45×", {"bold": True, "color": GREEN})]], size=52,
+             anchor=MSO_ANCHOR.MIDDLE)
+    add_text(s, MARGIN + Inches(3.6), sy, CONTENT_W - Inches(4.0), Inches(1.35),
+             "faster with the explicit path on one CPU core and one GPU than the implicit twin on 32 CPU cores",
+             size=16, color=INK, anchor=MSO_ANCHOR.MIDDLE, leading=1.15)
+    add_text(s, MARGIN + Inches(0.1), sy + Inches(1.42), CONTENT_W - Inches(0.2), Inches(0.28),
+             "hardware: Intel Xeon Platinum 8592+ CPU cores, NVIDIA L4 GPU",
+             size=10.5, color=MUTED, italic=True)
+    takeaway(s, [("Each implicit step pays Newton iterations, a global Jacobian, and a distributed "
+                  "direct solve.", {"bold": True, "color": INK}),
+                 (" The explicit step is one batched residual.", {})])
 
 
 # ================================================================ 12 SUMMARY / HANDOFF
